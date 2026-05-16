@@ -1,9 +1,9 @@
-const express = require("express");
-const router  = express.Router();
-const User    = require("../models/User");
-const bcrypt  = require("bcryptjs");
-const jwt     = require("jsonwebtoken");
-const sendEmail = require("../utils/sendEmail");
+const express     = require("express");
+const router      = express.Router();
+const User        = require("../models/User");
+const bcrypt      = require("bcryptjs");
+const jwt         = require("jsonwebtoken");
+const sendEmail   = require("../utils/sendEmail");
 
 const otpStore = new Map();
 
@@ -11,6 +11,14 @@ const otpStore = new Map();
 router.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
   try {
+    // Check all fields are present
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide name, email and password.",
+      });
+    }
+
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(400).json({ success: false, message: "Email already in use." });
@@ -21,7 +29,11 @@ router.post("/register", async (req, res) => {
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-    res.status(201).json({ success: true, token, user: { id: user._id, name: user.name, email: user.email } });
+    res.status(201).json({
+      success: true,
+      token,
+      user: { id: user._id, name: user.name, email: user.email },
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -31,9 +43,25 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   try {
+    // Check fields present
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email and password.",
+      });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ success: false, message: "Invalid credentials." });
+    }
+
+    // ── FIX: account created via Google has no password ───────────────────────
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message: "This account uses Google Sign-In. Please use the Google button.",
+      });
     }
 
     const match = await bcrypt.compare(password, user.password);
@@ -43,8 +71,50 @@ router.post("/login", async (req, res) => {
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-    res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email } });
+    res.json({
+      success: true,
+      token,
+      user: { id: user._id, name: user.name, email: user.email },
+    });
   } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ── POST /api/auth/google ─────────────────────────────────────────────────────
+// Called after Google OAuth succeeds on the frontend
+// Body: { name, email, googleId, picture }
+router.post("/google", async (req, res) => {
+  const { name, email, googleId, picture } = req.body;
+  try {
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required." });
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // New user — create without password (Google users don't need one)
+      // We store a random unusable string so MongoDB required validator passes
+      const unusablePassword = await bcrypt.hash(Math.random().toString(36), 10);
+      user = await User.create({
+        name:     name || email.split("@")[0],
+        email,
+        password: unusablePassword,
+      });
+    }
+
+    // Return token — same flow as normal login
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    res.json({
+      success: true,
+      token,
+      user: { id: user._id, name: user.name, email: user.email },
+    });
+  } catch (err) {
+    console.error("Google auth error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -55,13 +125,17 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
+      // Don't reveal whether email exists (security best practice)
       return res.json({ success: true, message: "If that email exists, an OTP has been sent." });
     }
 
     const otp     = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 30 * 1000;
+    const expires = Date.now() + 30 * 1000;  // 30 seconds
 
     otpStore.set(email, { otp, expires });
+
+    // Log OTP to terminal for development testing
+    console.log(`\n🔑 OTP for ${email}: ${otp}  (expires in 30 seconds)\n`);
 
     await sendEmail({
       to:      email,
@@ -80,7 +154,7 @@ router.post("/forgot-password", async (req, res) => {
 
     res.json({ success: true, message: "OTP sent to your email." });
   } catch (err) {
-    console.error(err);
+    console.error("Forgot password error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -89,21 +163,35 @@ router.post("/forgot-password", async (req, res) => {
 router.post("/verify-otp", async (req, res) => {
   const { email, otp, newPassword } = req.body;
   try {
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP and new password are required.",
+      });
+    }
+
     const record = otpStore.get(email);
 
     if (!record) {
-      return res.status(400).json({ success: false, message: "No OTP requested for this email." });
+      return res.status(400).json({
+        success: false,
+        message: "No OTP requested for this email.",
+      });
     }
 
     if (Date.now() > record.expires) {
       otpStore.delete(email);
-      return res.status(400).json({ success: false, message: "OTP expired. Please request a new one." });
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired. Please request a new one.",
+      });
     }
 
     if (record.otp !== otp) {
       return res.status(400).json({ success: false, message: "Invalid OTP." });
     }
 
+    // Hash the new password and update
     const hashed = await bcrypt.hash(newPassword, 10);
     await User.findOneAndUpdate({ email }, { password: hashed });
 
