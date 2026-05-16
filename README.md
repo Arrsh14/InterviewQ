@@ -145,8 +145,8 @@ interviewiq/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/interviewiq.git
-cd interviewiq
+git clone https://github.com/yourusername/InterviewQ.git
+cd InterviewQ
 ```
 
 ---
