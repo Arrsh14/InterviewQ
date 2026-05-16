@@ -350,12 +350,6 @@ Uses `@vladmandic/face-api` with TinyFaceDetector model:
 
 ## 👨‍💻 Author
 
-**Arrsh Sharma**
+**Arrsh Tripathi**
 B.Tech Computer Science — VIT Vellore
 Registration No: 23BCI0191
-
----
-
-## 📄 License
-
-This project is built for academic purposes as part of the Fog and Edge Computing / Embedded Systems coursework at VIT Vellore.
