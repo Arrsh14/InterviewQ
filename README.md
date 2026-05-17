@@ -1,16 +1,17 @@
 # InterviewQ — Multimodal AI Framework for Real-Time Interview Performance Evaluation
 
-> A full-stack AI-powered mock interview platform that evaluates speech, facial engagement, eye contact, and communication quality in real time.
+> A full-stack AI-powered mock interview platform that evaluates speech, facial engagement, eye contact, posture, and communication quality in real time.
 
 ---
 
 ## 📌 Project Overview
 
-InterviewQ is a research-grade web application built as part of a Computer Science project at **VIT Vellore**. It uses a multimodal AI pipeline to evaluate interview performance across four dimensions:
+InterviewQ is a research-grade web application built as part of a Computer Science project at **VIT Vellore**. It uses a multimodal AI pipeline to evaluate interview performance across five dimensions:
 
-- 👁️ **Eye Contact** — real-time gaze tracking via face-api.js
+- 👁️ **Eye Contact** — real-time gaze tracking via face-api.js + MediaPipe Face Mesh
+- 🧍 **Posture Detection** — body language analysis via MediaPipe Pose landmarks
+- 😐 **Emotion Detection** — facial expression classification using FER2013-trained CNN
 - 🗣️ **Communication** — NLP-based transcript analysis
-- 😐 **Facial Engagement** — facial landmark detection
 - 📊 **Technical Depth** — AI-scored response evaluation via Gemini
 
 ---
@@ -63,39 +64,54 @@ interviewiq/
 │       └── utils/
 │           └── helpers.js           # Utility functions
 │
-└── backend/                         # Node.js + Express API server
-    ├── server.js                    # App entry point + middleware + routes
-    ├── .env                         # Environment variables (never commit)
-    ├── config/
-    │   ├── db.js                    # MongoDB Atlas connection
-    │   └── gemini.js                # Google Gemini AI client
-    ├── routes/
-    │   ├── AuthRoutes.js            # /api/auth/*
-    │   ├── interviewRoutes.js       # /api/interviews/*
-    │   ├── assa.js                  # /api/ai/*
-    │   ├── transciptRoutes.js       # /api/transcripts/*
-    │   ├── abcd.js                  # /api/analytics/*
-    │   └── resumeRoute.js           # /api/resume/*
-    ├── controllers/
-    │   ├── authController.js        # Register, login, Google OAuth, OTP
-    │   ├── interviewController.js   # Create/fetch interview sessions
-    │   ├── aiController.js          # AI scoring + feedback generation
-    │   ├── analyticsController.js   # Performance trend analytics
-    │   ├── transcriptController.js  # Transcript save/fetch
-    │   └── resumeController.js      # PDF parse + Gemini question generation
+├── backend/                         # Node.js + Express API server
+│   ├── server.js                    # App entry point + middleware + routes
+│   ├── .env                         # Environment variables (never commit)
+│   ├── config/
+│   │   ├── db.js                    # MongoDB Atlas connection
+│   │   └── gemini.js                # Google Gemini AI client
+│   ├── routes/
+│   │   ├── AuthRoutes.js            # /api/auth/*
+│   │   ├── interviewRoutes.js       # /api/interviews/*
+│   │   ├── assa.js                  # /api/ai/*
+│   │   ├── transciptRoutes.js       # /api/transcripts/*
+│   │   ├── abcd.js                  # /api/analytics/*
+│   │   └── resumeRoute.js           # /api/resume/*
+│   ├── controllers/
+│   │   ├── authController.js        # Register, login, Google OAuth, OTP
+│   │   ├── interviewController.js   # Create/fetch interview sessions
+│   │   ├── aiController.js          # AI scoring + feedback generation
+│   │   ├── analyticsController.js   # Performance trend analytics
+│   │   ├── transcriptController.js  # Transcript save/fetch
+│   │   └── resumeController.js      # PDF parse + Gemini question generation
+│   ├── models/
+│   │   ├── User.js                  # User schema (email, password, googleId)
+│   │   ├── Interview.js             # Interview session schema
+│   │   ├── Result.js                # Score + feedback schema
+│   │   └── Transcript.js            # Speech transcript schema
+│   ├── middleware/
+│   │   └── authMiddleware.js        # JWT token verification
+│   ├── services/
+│   │   ├── geminiService.js         # Gemini API wrapper
+│   │   ├── nlpService.js            # NLP text analysis
+│   │   └── scoringService.js        # Score calculation logic
+│   └── utils/
+│       └── sendEmail.js             # Nodemailer OTP email sender
+│
+└── ml-models/                       # Python CV + ML microservice
+    ├── app.py                       # Flask server entry point (port 5001)
+    ├── emotion_model.h5             # Trained CNN emotion detection model
+    ├── fer2013.zip                  # FER2013 training dataset (not committed)
     ├── models/
-    │   ├── User.js                  # User schema (email, password, googleId)
-    │   ├── Interview.js             # Interview session schema
-    │   ├── Result.js                # Score + feedback schema
-    │   └── Transcript.js            # Speech transcript schema
-    ├── middleware/
-    │   └── authMiddleware.js        # JWT token verification
-    ├── services/
-    │   ├── geminiService.js         # Gemini API wrapper
-    │   ├── nlpService.js            # NLP text analysis
-    │   └── scoringService.js        # Score calculation logic
-    └── utils/
-        └── sendEmail.js             # Nodemailer OTP email sender
+    │   ├── face_landmarker.task         # MediaPipe face landmark model
+    │   └── pose_landmarker_lite.task    # MediaPipe pose landmark model
+    ├── opencv/
+    │   ├── eye_contact.py           # Gaze tracking via MediaPipe Face Mesh
+    │   ├── posture_detection.py     # Body posture analysis via MediaPipe Pose
+    │   ├── emotion_detection.py     # FER2013 CNN emotion classifier
+    │   └── face_detection.py        # Face detection preprocessing
+    └── training/
+        └── train_emotion.py         # CNN training script on FER2013 dataset
 ```
 
 ---
@@ -130,12 +146,22 @@ interviewiq/
 | `morgan` | 1.10.1 | HTTP request logging |
 | `nodemon` | 3.1.14 | Dev auto-restart |
 
+### ML / Computer Vision
+| Library | Purpose |
+|---|---|
+| `flask` + `flask-cors` | Python microserver + CORS for React |
+| `opencv-python` | Frame decoding and image processing |
+| `mediapipe` | Face mesh + pose landmark models |
+| `tensorflow` / `keras` | CNN emotion model training + inference |
+| `numpy` | Array operations on frame data |
+
 ---
 
 ## 🚀 Setup & Installation
 
 ### Prerequisites
 - Node.js v18+
+- Python 3.11+
 - MongoDB Atlas account
 - Google Cloud project (for OAuth)
 - Gmail account with App Password (for OTP emails)
@@ -145,7 +171,7 @@ interviewiq/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/InterviewQ.git
+git clone https://github.com/Arrsh14/InterviewQ.git
 cd InterviewQ
 ```
 
@@ -218,6 +244,86 @@ Open [http://localhost:5173](http://localhost:5173)
 
 ---
 
+### 4. ML Server setup
+
+```bash
+cd ml-models
+python3 -m venv venv
+source venv/bin/activate        # Mac/Linux
+venv\Scripts\activate           # Windows
+
+pip install flask flask-cors opencv-python mediapipe numpy
+```
+
+Start the ML server:
+```bash
+python app.py
+```
+
+You should see:
+```
+Loading models...
+✅ Models loaded
+🚀 Starting InterviewQ ML server on http://localhost:5001
+```
+
+---
+
+## 🤖 ML Server — How It Works
+
+The frontend captures webcam frames during the interview, encodes them as base64, and sends them to the Flask server. The server runs MediaPipe models on each frame and returns structured JSON scores back to the frontend.
+
+```
+Frontend (React)
+     │
+     │  POST /analyse  { frame: "data:image/jpeg;base64,..." }
+     ▼
+Flask Server (localhost:5001)
+     │
+     ├── eye_contact.py       → MediaPipe Face Mesh → gaze score
+     └── posture_detection.py → MediaPipe Pose     → posture score
+     │
+     │  { eye_contact: {...}, posture: {...}, overall_score: 85 }
+     ▼
+Frontend displays live feedback
+```
+
+### ML API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/analyse` | Analyse webcam frame → eye contact + posture scores |
+| GET | `/health` | ML server health check |
+
+**POST /analyse — Request:**
+```json
+{ "frame": "data:image/jpeg;base64,/9j/4AAQ..." }
+```
+
+**POST /analyse — Response:**
+```json
+{
+  "success": true,
+  "eye_contact": { "making_contact": true, "confidence": 82 },
+  "posture": { "score": 76, "feedback": "Slight forward lean detected" },
+  "overall_score": 79
+}
+```
+
+**Score formula:** `overall = (eye_contact_confidence × 0.5) + (posture_score × 0.5)`
+
+### CV Modules
+
+**👁️ Eye Contact** (`opencv/eye_contact.py`) — MediaPipe FaceLandmarker with 478 landmarks. Computes gaze direction from iris position relative to eye corners. Returns `making_contact` (bool) + `confidence` (0–100).
+
+**🧍 Posture Detection** (`opencv/posture_detection.py`) — MediaPipe PoseLandmarker tracking shoulder alignment, head tilt, and spine angle. Confidence thresholds: detection `0.5`, presence `0.5`, tracking `0.5`. Returns `score` (0–100) + `feedback` string.
+
+**😐 Emotion Detection** (`opencv/emotion_detection.py`) — CNN trained on FER2013 (35,887 labeled grayscale images), classifies 7 emotions: Angry, Disgust, Fear, Happy, Sad, Surprise, Neutral. Weights saved in `emotion_model.h5`.
+
+**🔍 Face Detection** (`opencv/face_detection.py`) — Preprocessing step for emotion and eye contact modules. Fast bounding box detection before passing ROI to downstream models.
+
+---
+
 ## 🧭 Routes
 
 ### Frontend Routes
@@ -278,7 +384,7 @@ Forgot Password → OTP email (30s expiry) → verify → bcrypt new password
 
 ---
 
-## 👁️ Eye Contact Detection
+## 👁️ Eye Contact Detection (Frontend)
 
 Uses `@vladmandic/face-api` with TinyFaceDetector model:
 
@@ -345,6 +451,10 @@ Uses `@vladmandic/face-api` with TinyFaceDetector model:
 - MongoDB Atlas Network Access must include `0.0.0.0/0` for local development
 - Gemini free tier has per-minute and daily request limits — use `gemini-2.0-flash-lite` for best quota
 - OTP expiry is stored in-memory (`Map`) — use Redis for production
+- ML server runs on **port 5001**, separate from Node.js backend on port 5000
+- `ml_venv/` and `venv/` folders must be in `.gitignore` — never commit them
+- `emotion_model.h5` and `fer2013.zip` are large files — consider Git LFS or hosting separately
+- MediaPipe model files in `ml-models/models/` must be present before starting the ML server
 
 ---
 
