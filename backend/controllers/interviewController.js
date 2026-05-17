@@ -89,8 +89,16 @@ const saveAnswer = async (req, res) => {
       questionIndex,
       questionText,
       questionType,
-      transcript = "",
-      wordCount  = 0,
+      transcript      = "",
+      wordCount       = 0,
+      // Vision scores from ML server
+      eyeContactScore = 0,
+      postureScore    = 0,
+      // NLP scores from Flask /analyse/nlp
+      nlpScore        = 0,
+      fillerScore     = 0,
+      grammarScore    = 0,
+      confidenceScore = 0,
     } = req.body;
 
     // Find the session and make sure it belongs to this user
@@ -115,8 +123,14 @@ const saveAnswer = async (req, res) => {
 
     if (existingIndex !== -1) {
       // Update existing answer
-      interview.answers[existingIndex].transcript = transcript;
-      interview.answers[existingIndex].wordCount  = wordCount;
+      interview.answers[existingIndex].transcript      = transcript;
+      interview.answers[existingIndex].wordCount       = wordCount;
+      interview.answers[existingIndex].eyeContactScore = eyeContactScore;
+      interview.answers[existingIndex].postureScore    = postureScore;
+      interview.answers[existingIndex].nlpScore        = nlpScore;
+      interview.answers[existingIndex].fillerScore     = fillerScore;
+      interview.answers[existingIndex].grammarScore    = grammarScore;
+      interview.answers[existingIndex].confidenceScore = confidenceScore;
     } else {
       // Push new answer
       interview.answers.push({
@@ -125,6 +139,12 @@ const saveAnswer = async (req, res) => {
         questionType: questionType || "Behavioral",
         transcript,
         wordCount,
+        eyeContactScore,
+        postureScore,
+        nlpScore,
+        fillerScore,
+        grammarScore,
+        confidenceScore,
       });
     }
 

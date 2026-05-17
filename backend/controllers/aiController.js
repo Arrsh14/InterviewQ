@@ -19,7 +19,7 @@ const User      = require("../models/User");
 // Using try/require so the controller still loads even if services aren't built yet
 let scoringService, openaiService, nlpService;
 try { scoringService = require("../services/scoringService"); } catch (_) {}
-try { openaiService = require("../services/geminiService"); } catch (_) {}
+try { openaiService  = require("../services/openaiService");  } catch (_) {}
 try { nlpService     = require("../services/nlpService");     } catch (_) {}
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,32 +97,124 @@ const evaluateInterview = async (req, res) => {
       });
     }
 
-    // ── 5. Calculate top-level scores ────────────────────────────────────
-    // Weighted formula — tune weights here as you gather real data
+    // ── 5. Extract NLP scores from saved answers ─────────────────────────
+    // These were saved by InterviewPage when calling /analyse/nlp
+    const answerNLPScores = interview.answers.map((a) => ({
+      nlpScore:        a.nlpScore        || 0,
+      fillerScore:     a.fillerScore     || 0,
+      grammarScore:    a.grammarScore    || 0,
+      confidenceScore: a.confidenceScore || 0,
+    }));
+
+    const avgNLP = (key) => answerNLPScores.length
+      ? Math.round(answerNLPScores.reduce((s, a) => s + (a[key] || 0), 0) / answerNLPScores.length)
+      : 0;
+
+    const avgNLPScore        = avgNLP("nlpScore");
+    const avgFillerScore     = avgNLP("fillerScore")  * 10; // convert /10 to /100
+    const avgGrammarScore    = avgNLP("grammarScore") * 10;
+    const avgConfidenceScore = avgNLP("confidenceScore") * 10;
+
+    // ── 6. Calculate top-level scores using ALL 6 signals ──────────────────
+    //
+    // Signal sources:
+    //   eyeContactScore      → ML server (MediaPipe face landmarks)
+    //   facialEngagementScore → ML server (overall face analysis)
+    //   postureScore from req → ML server (MediaPipe pose)
+    //   avgConfidenceScore   → NLP Flask (weak word analysis)
+    //   avgGrammarScore      → NLP Flask (grammar checker)
+    //   avgFillerScore       → NLP Flask (filler word detector)
+    //   avgNLPScore          → NLP Flask (combined NLP score)
+    //   dimensionScores      → Rule-based scoring from answers
+    //
+    // ── Confidence Score ─────────────────────────────────────────────────────
+    // What it measures: how confident the candidate sounds and looks
+    //   40% → vocal confidence from text analysis (weak words, hedging)
+    //   30% → eye contact (looking at camera = confident)
+    //   20% → posture score (upright = confident)
+    //   10% → presence & engagement dimension
+    const postureFromReq = req.body.postureScore || 0;
     const confidenceScore = Math.round(
-      (dimensionScores.persuasiveAuthority * 0.4) +
-      (eyeContactScore                     * 0.3) +
-      (dimensionScores.presenceEngagement  * 0.3)
+      (avgConfidenceScore  * 0.40) +
+      (eyeContactScore     * 0.30) +
+      (postureFromReq      * 0.20) +
+      (dimensionScores.presenceEngagement * 0.10)
     );
 
+    // ── Communication Score ───────────────────────────────────────────────────
+    // What it measures: how clearly and effectively the candidate communicates
+    //   25% → overall NLP quality (combined filler + grammar + confidence)
+    //   25% → grammar correctness
+    //   20% → filler word control (fewer fillers = better communication)
+    //   20% → subject matter depth
+    //   10% → answer architecture (STAR structure)
     const communicationScore = Math.round(
-      (dimensionScores.subjectMatterAuthority * 0.35) +
-      (dimensionScores.answerArchitecture     * 0.35) +
-      (nlpScores.vocabularyScore              * 0.30)
+      (avgNLPScore                            * 0.25) +
+      (avgGrammarScore                        * 0.25) +
+      (avgFillerScore                         * 0.20) +
+      (dimensionScores.subjectMatterAuthority * 0.20) +
+      (dimensionScores.answerArchitecture     * 0.10)
     );
 
+    // ── Attention Score ───────────────────────────────────────────────────────
+    // What it measures: how engaged and focused the candidate appears
+    //   40% → eye contact consistency throughout session
+    //   30% → facial engagement (expressions, micro-movements)
+    //   20% → emotional intelligence dimension
+    //   10% → response timing (not too fast, not too slow)
     const attentionScore = Math.round(
-      (eyeContactScore                       * 0.5) +
-      (facialEngagementScore                 * 0.3) +
-      (dimensionScores.emotionalIntelligence * 0.2)
+      (eyeContactScore                       * 0.40) +
+      (facialEngagementScore                 * 0.30) +
+      (dimensionScores.emotionalIntelligence * 0.20) +
+      (dimensionScores.responseTiming        * 0.10)
     );
 
-    // Overall = weighted average of the 3 top scores
+    // ── Overall Score ─────────────────────────────────────────────────────────
+    // Direct weighted fusion of all 6 raw signals
+    //   20% → eye contact        (vision)
+    //   15% → NLP score          (language quality)
+    //   15% → grammar            (language correctness)
+    //   15% → vocal confidence   (language confidence)
+    //   15% → filler control     (speech fluency)
+    //   10% → posture            (body language)
+    //   10% → facial engagement  (facial behaviour)
     const overallScore = Math.round(
-      (confidenceScore    * 0.33) +
-      (communicationScore * 0.34) +
-      (attentionScore     * 0.33)
+      (eyeContactScore     * 0.20) +
+      (avgNLPScore         * 0.15) +
+      (avgGrammarScore     * 0.15) +
+      (avgConfidenceScore  * 0.15) +
+      (avgFillerScore      * 0.15) +
+      (postureFromReq      * 0.10) +
+      (facialEngagementScore * 0.10)
     );
+
+    // ── Clamp all scores to 0-100 range ───────────────────────────────────────
+    const clamp = (v) => Math.min(100, Math.max(0, v));
+
+    const finalScores = {
+      overallScore:       clamp(overallScore),
+      confidenceScore:    clamp(confidenceScore),
+      communicationScore: clamp(communicationScore),
+      attentionScore:     clamp(attentionScore),
+    };
+
+    console.log("\n📊 SCORING BREAKDOWN");
+    console.log("─────────────────────────────────────");
+    console.log("Vision signals:");
+    console.log("  Eye Contact:       ", eyeContactScore);
+    console.log("  Facial Engagement: ", facialEngagementScore);
+    console.log("  Posture:           ", postureFromReq);
+    console.log("NLP signals:");
+    console.log("  NLP Score:         ", avgNLPScore);
+    console.log("  Grammar Score:     ", avgGrammarScore);
+    console.log("  Filler Score:      ", avgFillerScore);
+    console.log("  Confidence Score:  ", avgConfidenceScore);
+    console.log("Final scores:");
+    console.log("  Overall:           ", finalScores.overallScore);
+    console.log("  Confidence:        ", finalScores.confidenceScore);
+    console.log("  Communication:     ", finalScores.communicationScore);
+    console.log("  Attention:         ", finalScores.attentionScore);
+    console.log("─────────────────────────────────────\n");
 
     // ── 6. Generate AI feedback text ─────────────────────────────────────
     let aiFeedback = {
@@ -137,19 +229,19 @@ const evaluateInterview = async (req, res) => {
       // openaiService.generateFeedback returns the aiFeedback object above
       aiFeedback = await openaiService.generateFeedback({
         transcripts:    allTranscripts,
-        overallScore,
-        confidenceScore,
-        communicationScore,
-        attentionScore,
+        overallScore:       finalScores.overallScore,
+        confidenceScore:    finalScores.confidenceScore,
+        communicationScore: finalScores.communicationScore,
+        attentionScore:     finalScores.attentionScore,
         dimensionScores,
       });
     }
 
     // ── 7. Save everything back to the Interview document ─────────────────
-    interview.overallScore       = overallScore;
-    interview.confidenceScore    = confidenceScore;
-    interview.communicationScore = communicationScore;
-    interview.attentionScore     = attentionScore;
+    interview.overallScore       = finalScores.overallScore;
+    interview.confidenceScore    = finalScores.confidenceScore;
+    interview.communicationScore = finalScores.communicationScore;
+    interview.attentionScore     = finalScores.attentionScore;
     interview.dimensions         = dimensionScores;
     interview.aiFeedback         = aiFeedback;
 
@@ -173,10 +265,10 @@ const evaluateInterview = async (req, res) => {
       message: "Evaluation complete",
       result: {
         interviewId:        interview._id,
-        overallScore,
-        confidenceScore,
-        communicationScore,
-        attentionScore,
+        overallScore:       finalScores.overallScore,
+        confidenceScore:    finalScores.confidenceScore,
+        communicationScore: finalScores.communicationScore,
+        attentionScore:     finalScores.attentionScore,
         dimensions:         dimensionScores,
         aiFeedback,
         durationSeconds:    interview.durationSeconds,

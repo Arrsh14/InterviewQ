@@ -12,6 +12,14 @@ const questionAnswerSchema = new mongoose.Schema(
     },
     transcript: { type: String, default: "" },   // user's spoken/typed answer
     wordCount:  { type: Number, default: 0  },
+    // Vision scores — from ML server
+    eyeContactScore: { type: Number, default: 0 },
+    postureScore:    { type: Number, default: 0 },
+    // NLP scores — from Flask /analyse/nlp
+    nlpScore:        { type: Number, default: 0 },
+    fillerScore:     { type: Number, default: 0 },
+    grammarScore:    { type: Number, default: 0 },
+    confidenceScore: { type: Number, default: 0 },
     // AI scores per question (0–100) — populated by AI module
     contentScore:    { type: Number, default: 0 },
     deliveryScore:   { type: Number, default: 0 },

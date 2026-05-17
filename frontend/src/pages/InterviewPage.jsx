@@ -58,6 +58,10 @@ export default function InterviewPage() {
     eyeContact: 0, postureScore: 0, overallScore: 0,
     postureFeedback: "", makingContact: false,
   });
+  const [nlpScores,   setNlpScores]   = useState({
+    nlpScore: 0, fillerScore: 0, grammarScore: 0,
+    confidenceScore: 0, confidenceLabel: "", fillerCount: 0,
+  });
 
   const token    = localStorage.getItem("iq_token");
   const q        = ALL_QUESTIONS[currentQ];
@@ -241,8 +245,37 @@ export default function InterviewPage() {
     mlIntervalRef.current = null;
   };
 
+  // ── Analyse NLP for a transcript ─────────────────────────────────────────
+  const analyseNLP = async (text) => {
+    if (!text || text.split(/\s+/).filter(Boolean).length < 5) return;
+    try {
+      const res  = await fetch("http://localhost:5001/analyse/nlp", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ transcript: text }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNlpScores({
+          nlpScore:        data.nlp_score                          || 0,
+          fillerScore:     data.filler_words?.filler_score         || 0,
+          grammarScore:    data.grammar?.grammar_score             || 0,
+          confidenceScore: data.confidence?.confidence_score       || 0,
+          confidenceLabel: data.confidence?.confidence_label       || "",
+          fillerCount:     data.filler_words?.total_fillers        || 0,
+        });
+        console.log("NLP scores:", data);
+      }
+    } catch (err) {
+      console.log("NLP analysis error:", err.message);
+    }
+  };
+
   // ── Save answer to backend ────────────────────────────────────────────────
   const saveAnswer = async (qIndex, qText, qType, text) => {
+    // Run NLP analysis in parallel — don't wait for it to finish
+    analyseNLP(text);
+
     try {
       let currentId = interviewId;
       if (!currentId) {
@@ -262,13 +295,17 @@ export default function InterviewPage() {
         method:  "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          questionIndex:   qIndex,
-          questionText:    qText,
-          questionType:    qType,
-          transcript:      text,
-          wordCount:       text.split(/\s+/).filter(Boolean).length,
-          eyeContactScore: mlScores.eyeContact,
-          postureScore:    mlScores.postureScore,
+          questionIndex:    qIndex,
+          questionText:     qText,
+          questionType:     qType,
+          transcript:       text,
+          wordCount:        text.split(/\s+/).filter(Boolean).length,
+          eyeContactScore:  mlScores.eyeContact,
+          postureScore:     mlScores.postureScore,
+          nlpScore:         nlpScores.nlpScore,
+          fillerScore:      nlpScores.fillerScore,
+          grammarScore:     nlpScores.grammarScore,
+          confidenceScore:  nlpScores.confidenceScore,
         }),
       });
     } catch (err) {
@@ -417,19 +454,36 @@ export default function InterviewPage() {
               )}
             </div>
 
-            {/* ML Score boxes */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px", padding: "12px 14px", borderTop: "1px solid #f0f0f0" }}>
+            {/* ML + NLP Score boxes */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "6px", padding: "12px 14px", borderTop: "1px solid #f0f0f0" }}>
               {[
-                ["👁️ Eye Contact", `${mlScores.eyeContact}%`,   "#2f8d46"],
-                ["🧍 Posture",     `${mlScores.postureScore}%`, "#4a90d9"],
-                ["⭐ Overall",     `${mlScores.overallScore}%`, "#f4a426"],
-              ].map(([label, val, color]) => (
+                ["👁️ Eye Contact",  `${mlScores.eyeContact}%`,          "#2f8d46", mlConnected],
+                ["🧍 Posture",      `${mlScores.postureScore}%`,         "#4a90d9", mlConnected],
+                ["⭐ ML Score",     `${mlScores.overallScore}%`,         "#f4a426", mlConnected],
+                ["🗣️ Confidence",   `${nlpScores.confidenceScore}/10`,   "#7b5ea7", nlpScores.nlpScore > 0],
+                ["✍️ Grammar",      `${nlpScores.grammarScore}/10`,      "#2f8d46", nlpScores.nlpScore > 0],
+                ["📊 NLP Score",    `${nlpScores.nlpScore}%`,            "#4a90d9", nlpScores.nlpScore > 0],
+              ].map(([label, val, color, active]) => (
                 <div key={label} style={{ textAlign: "center", padding: "6px", background: "#fafafa", borderRadius: "6px", border: "1px solid #f0f0f0" }}>
-                  <p style={{ fontSize: "10px", color: "#aaa", margin: "0 0 2px" }}>{label}</p>
-                  <p style={{ fontSize: "14px", fontWeight: 800, color, margin: 0 }}>{mlConnected ? val : "—"}</p>
+                  <p style={{ fontSize: "9px", color: "#aaa", margin: "0 0 2px" }}>{label}</p>
+                  <p style={{ fontSize: "13px", fontWeight: 800, color, margin: 0 }}>{active ? val : "—"}</p>
                 </div>
               ))}
             </div>
+
+            {/* Filler word warning */}
+            {nlpScores.fillerCount > 3 && (
+              <div style={{ margin: "0 14px 10px", padding: "7px 12px", background: "#fff8ee", border: "1px solid #fde3b0", borderRadius: "6px", fontSize: "11px", color: "#f4a426", fontWeight: 600 }}>
+                ⚠️ {nlpScores.fillerCount} filler words detected — try to speak more deliberately
+              </div>
+            )}
+
+            {/* Confidence label */}
+            {nlpScores.confidenceLabel && (
+              <div style={{ margin: "0 14px 10px", padding: "7px 12px", background: "#f3eeff", border: "1px solid #d8c5f7", borderRadius: "6px", fontSize: "11px", color: "#7b5ea7", fontWeight: 600 }}>
+                🎯 {nlpScores.confidenceLabel}
+              </div>
+            )}
 
             {mlConnected && mlScores.postureFeedback && mlScores.postureFeedback !== "Good posture!" && (
               <div style={{ margin: "0 14px 12px", padding: "8px 12px", background: "#fff8ee", border: "1px solid #fde3b0", borderRadius: "6px", fontSize: "12px", color: "#f4a426", fontWeight: 600 }}>

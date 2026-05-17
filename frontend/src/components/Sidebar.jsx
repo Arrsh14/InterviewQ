@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 
 // Each item knows its own route
 const navItems = [
-  { icon: "⊞", label: "Dashboard",     route: "/dashboard"  },
-  { icon: "🎙", label: "Interviews",    route: "/interview"  },
-  { icon: "📊", label: "Analytics",     route: "/dashboard"  },
-  { icon: "📋", label: "Results",       route: "/results"    },
-  { icon: "🎯", label: "Question Bank", route: "/dashboard"  },
-  { icon: "⚙️", label: "Settings",      route: "/dashboard"  },
+  { icon: "⊞",  label: "Dashboard",     route: "/dashboard"  },
+  { icon: "🎙",  label: "Interviews",    route: "/interview"  },
+  { icon: "📊",  label: "Analytics",     route: "/dashboard"  },
+  { icon: "📋",  label: "Results",       route: "/results"    },
+  { icon: "🎯",  label: "Question Bank", route: "/dashboard"  },
+  { icon: "⚙️",  label: "Settings",      route: "/settings"   },  // ← only this changed
 ];
 
 // activePage: "Dashboard" | "Interviews" | "Results"  (defaults to "Dashboard")

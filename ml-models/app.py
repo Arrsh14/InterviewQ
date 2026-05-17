@@ -7,10 +7,18 @@ import mediapipe as mp
 import os
 import sys
 
+# ── Import OpenCV scripts ─────────────────────────────────────────────────────
 sys.path.append(os.path.join(os.path.dirname(__file__), "opencv"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "nlp"))
 
 from eye_contact       import check_eye_contact
 from posture_detection import detect_posture
+
+# ── Import NLP scripts ────────────────────────────────────────────────────────
+from filler_word_detection import FillerTracker
+from grammar_analysis      import GrammarTracker
+from star_method_analysis  import STARTracker
+from confidence_analysis   import ConfidenceTracker
 
 BaseOptions           = mp.tasks.BaseOptions
 FaceLandmarker        = mp.tasks.vision.FaceLandmarker
@@ -22,6 +30,7 @@ VisionRunningMode     = mp.tasks.vision.RunningMode
 app = Flask(__name__)
 CORS(app)
 
+# ── Load vision models once at startup ───────────────────────────────────────
 print("Loading models...")
 
 face_landmarker = FaceLandmarker.create_from_options(
@@ -53,6 +62,7 @@ def decode_frame(base64_image):
     return frame
 
 
+# ── POST /analyse ─────────────────────────────────────────────────────────────
 @app.route("/analyse", methods=["POST"])
 def analyse():
     try:
@@ -100,6 +110,88 @@ def analyse():
         return jsonify({ "success": False, "message": str(e) }), 500
 
 
+# ── POST /analyse/nlp ─────────────────────────────────────────────────────────
+# ── POST /analyse/nlp ─────────────────────────────────────────────────────────
+@app.route("/analyse/nlp", methods=["POST"])
+def analyse_nlp():
+    try:
+        data = request.get_json()
+        if not data or "transcript" not in data:
+            return jsonify({ "success": False, "message": "No transcript provided" }), 400
+
+        transcript = data["transcript"].strip()
+        if not transcript:
+            return jsonify({ "success": False, "message": "Empty transcript" }), 400
+
+        results = {}
+
+        # ── Filler word detection ─────────────────────────────────────────────
+        try:
+            filler_tracker = FillerTracker()
+            filler_tracker.process_transcript(transcript)
+            results["filler_words"] = {
+                "total_fillers":      filler_tracker.total_fillers,
+                "fillers_per_minute": filler_tracker.fillers_per_minute(),
+                "filler_score":       filler_tracker.filler_score(),
+                "top_fillers":        filler_tracker.top_fillers(),
+            }
+        except Exception as e:
+            print(f"Filler error: {e}")
+            results["filler_words"] = { "filler_score": 5, "total_fillers": 0 }
+
+        # ── Grammar analysis ──────────────────────────────────────────────────
+        try:
+            grammar_tracker = GrammarTracker()
+            errors          = grammar_tracker.analyze_text(transcript)
+            results["grammar"] = {
+                "total_errors":  grammar_tracker.total_errors,
+                "grammar_score": grammar_tracker.grammar_score(),
+                "errors":        errors[:5],
+            }
+        except Exception as e:
+            print(f"Grammar error: {e}")
+            results["grammar"] = { "grammar_score": 5, "total_errors": 0 }
+
+        # ── STAR method — skipped (uses Gemini, handled by Node backend) ──────
+        results["star"] = { "score": 5, "feedback": "Evaluated by Gemini on backend" }
+
+        # ── Confidence analysis ───────────────────────────────────────────────
+        try:
+            conf_tracker = ConfidenceTracker()
+            conf_tracker.analyze_text(transcript)
+            label, _     = conf_tracker.get_live_feedback()
+            results["confidence"] = {
+                "confidence_score": conf_tracker.confidence_score(),
+                "confidence_label": label,
+                "weak_words":       conf_tracker.weak_word_count,
+                "speaking_pace":    conf_tracker.speaking_pace(),
+            }
+        except Exception as e:
+            print(f"Confidence error: {e}")
+            results["confidence"] = { "confidence_score": 5, "confidence_label": "Unknown" }
+
+        # ── Combined NLP score ────────────────────────────────────────────────
+        filler_score  = results["filler_words"].get("filler_score",  5) * 10
+        grammar_score = results["grammar"].get("grammar_score",       5) * 10
+        conf_score    = results["confidence"].get("confidence_score", 5) * 10
+
+        nlp_score = int(
+            filler_score  * 0.3 +
+            grammar_score * 0.4 +
+            conf_score    * 0.3
+        )
+
+        results["nlp_score"] = nlp_score
+        results["success"]   = True
+
+        return jsonify(results)
+
+    except Exception as e:
+        print(f"NLP error: {e}")
+        return jsonify({ "success": False, "message": str(e) }), 500
+
+
+# ── GET /health ───────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({ "status": "ok", "message": "InterviewQ ML server running" })
