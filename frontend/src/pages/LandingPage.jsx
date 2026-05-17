@@ -1,91 +1,75 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import Navbar from "../components/Navbar";
-import FeatureCard from "../components/FeatureCard";
+
+// ── Design tokens (matching index.css) ────────────────────────────────────────
+const T = {
+  bgBase:      "#0A0A0A",
+  bgSurface:   "#111111",
+  bgCard:      "#141414",
+  bgElevated:  "#1A1A1A",
+  bgHover:     "#1E1E1E",
+  borderSubtle:"#1E1E1E",
+  borderBase:  "#2A2A2A",
+  borderStrong:"#3A3A3A",
+  textPrimary: "#F5F0E8",
+  textSecond:  "#A0A0A0",
+  textMuted:   "#666666",
+  textDim:     "#444444",
+  green:       "#4ADE80",
+  red:         "#F87171",
+  amber:       "#FBBF24",
+  blue:        "#60A5FA",
+};
 
 const features = [
-  {
-    icon: "🎙️",
-    title: "Real-Time Speech Analysis",
-    desc: "Evaluates tone, pacing, filler words, and vocal clarity as you speak.",
-  },
-  {
-    icon: "👁️",
-    title: "Facial Expression Tracking",
-    desc: "Computer vision monitors eye contact, micro-expressions, and confidence cues.",
-  },
-  {
-    icon: "🧠",
-    title: "NLP Content Scoring",
-    desc: "Assesses answer relevance, depth, structure, and keyword alignment.",
-  },
-  {
-    icon: "📊",
-    title: "Multimodal Fusion Engine",
-    desc: "Combines audio, video, and text signals into a holistic performance score.",
-  },
-  {
-    icon: "⚡",
-    title: "Instant AI Feedback",
-    desc: "Post-session reports highlight strengths and concrete improvement areas.",
-  },
-  {
-    icon: "🎯",
-    title: "Role-Specific Questions",
-    desc: "Curated question banks for tech, management, and behavioral interviews.",
-  },
+  { icon: "—", label: "Speech Analysis",       desc: "Tone, pacing, filler words, and vocal clarity scored in real time." },
+  { icon: "—", label: "Eye Contact Tracking",  desc: "Computer vision detects gaze direction and engagement throughout." },
+  { icon: "—", label: "NLP Content Scoring",   desc: "Answer relevance, depth, structure, and keyword alignment." },
+  { icon: "—", label: "Multimodal Fusion",     desc: "Audio, video, and text signals fused into one performance index." },
+  { icon: "—", label: "Instant AI Feedback",   desc: "Post-session reports pinpoint strengths and improvement areas." },
+  { icon: "—", label: "Resume-Based Questions",desc: "Upload your CV — the AI generates questions tailored to your experience." },
 ];
 
 const stats = [
-  { value: "94%", label: "Prediction Accuracy" },
+  { value: "94%",  label: "Prediction Accuracy" },
   { value: "12K+", label: "Interviews Analyzed" },
   { value: "3.2×", label: "Faster Improvement" },
   { value: "50ms", label: "Analysis Latency" },
 ];
 
-// ── Demo Modal Component ───────────────────────────────────────────────────────
+const process = [
+  { num: "01", title: "Upload Resume",      desc: "Drop your CV — the system reads it and generates personalised questions instantly." },
+  { num: "02", title: "Start Interview",    desc: "Answer questions on camera. Speech, facial signals, and content are captured live." },
+  { num: "03", title: "AI Evaluates",       desc: "Gemini AI and NLP models score every dimension of your performance." },
+  { num: "04", title: "Review & Improve",   desc: "Get a detailed report. Retake, compare scores, and track progress over time." },
+];
+
+// ── Demo Modal ────────────────────────────────────────────────────────────────
 function DemoModal({ onClose }) {
-  const [step, setStep]               = useState("intro"); // intro | interview | results
-  const [transcript, setTranscript]   = useState("");
-  const [isTyping, setIsTyping]       = useState(false);
+  const [step,        setStep]        = useState("intro");
+  const [transcript,  setTranscript]  = useState("");
+  const [isTyping,    setIsTyping]    = useState(false);
   const [showWarning, setShowWarning] = useState(false);
-  const [eyeScore, setEyeScore]       = useState(0);
-  const [scores, setScores]           = useState(null);
-  const [scoreAnim, setScoreAnim]     = useState(0);
+  const [eyeScore,    setEyeScore]    = useState(0);
+  const [scores,      setScores]      = useState(null);
+  const [scoreAnim,   setScoreAnim]   = useState(0);
   const videoRef  = useRef(null);
   const streamRef = useRef(null);
   const navigate  = useNavigate();
 
-  const DEMO_QUESTION = "Tell me about yourself and your greatest professional strength.";
-
-  const FAKE_TRANSCRIPT =
-    "I'm a software engineer with 3 years of experience building scalable web applications. " +
-    "My greatest strength is problem-solving — I thrive when breaking down complex challenges into " +
-    "clear, actionable steps. For example, at my last role I reduced API response time by 40% by " +
-    "identifying and optimising a bottleneck in our database queries.";
-
-  const DEMO_SCORES = {
-    overall:       82,
-    confidence:    76,
-    communication: 91,
-    attention:     68,
-    dimensions: {
-      subjectMatterAuthority: 88,
-      persuasiveAuthority:    79,
-      answerArchitecture:     92,
-      presenceEngagement:     65,
-      responseTiming:         84,
-      emotionalIntelligence:  71,
-    },
+  const DEMO_QUESTION   = "Tell me about yourself and your greatest professional strength.";
+  const FAKE_TRANSCRIPT = "I'm a software engineer with 3 years of experience building scalable web applications. My greatest strength is problem-solving — I thrive when breaking down complex challenges into clear, actionable steps. At my last role I reduced API response time by 40% by identifying a bottleneck in our database queries.";
+  const DEMO_SCORES     = {
+    overall: 82, confidence: 76, communication: 91, attention: 68,
+    dimensions: { subjectMatterAuthority: 88, persuasiveAuthority: 79, answerArchitecture: 92, presenceEngagement: 65, responseTiming: 84, emotionalIntelligence: 71 },
     feedback: {
-      contentQuality:  "Excellent use of a concrete example with measurable impact. Your answer demonstrated strong subject matter authority and clear logical flow.",
-      vocalDelivery:   "Confident and well-paced delivery with minimal filler words. Consider varying your tone slightly to maintain listener engagement throughout.",
-      bodyLanguage:    "Good eye contact maintained for most of the response. Brief lapses detected — try to keep your gaze steady during key points.",
-      answerStructure: "Strong STAR-method compliance. You clearly outlined the situation, your action, and the quantifiable result. Well structured overall.",
+      contentQuality:  "Excellent use of a concrete example with measurable impact. Strong subject matter authority and clear logical flow.",
+      vocalDelivery:   "Confident and well-paced with minimal filler words. Consider varying tone to maintain engagement.",
+      bodyLanguage:    "Good eye contact for most of the response. Brief lapses detected — keep gaze steady at key points.",
+      answerStructure: "Strong STAR-method compliance. Situation, action, and quantifiable result clearly outlined.",
     },
   };
 
-  // ── Start webcam ──────────────────────────────────────────────────────────
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -99,289 +83,191 @@ function DemoModal({ onClose }) {
     streamRef.current = null;
   };
 
-  // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => () => stopCamera(), []);
 
-  // ── Start demo interview ──────────────────────────────────────────────────
   const startDemo = async () => {
     setStep("interview");
     await startCamera();
-
-    // Simulate eye contact score rising
     let score = 0;
-    const eyeInterval = setInterval(() => {
-      score = Math.min(85, score + Math.random() * 8);
-      setEyeScore(Math.round(score));
-    }, 800);
-
-    // Show eye contact warning after 2 seconds
-    setTimeout(() => {
-      setShowWarning(true);
-      setTimeout(() => setShowWarning(false), 3000);
-    }, 2000);
-
-    // Start fake transcript typing after 1.5 seconds
+    const eyeInterval = setInterval(() => { score = Math.min(85, score + Math.random() * 8); setEyeScore(Math.round(score)); }, 800);
+    setTimeout(() => { setShowWarning(true); setTimeout(() => setShowWarning(false), 3000); }, 2000);
     setTimeout(() => {
       setIsTyping(true);
       let i = 0;
       const typeInterval = setInterval(() => {
         i += 3;
         setTranscript(FAKE_TRANSCRIPT.slice(0, i));
-        if (i >= FAKE_TRANSCRIPT.length) {
-          clearInterval(typeInterval);
-          setIsTyping(false);
-          clearInterval(eyeInterval);
-          setEyeScore(85);
-        }
+        if (i >= FAKE_TRANSCRIPT.length) { clearInterval(typeInterval); setIsTyping(false); clearInterval(eyeInterval); setEyeScore(85); }
       }, 30);
     }, 1500);
   };
 
-  // ── Show results ──────────────────────────────────────────────────────────
   const showResults = () => {
-    stopCamera();
-    setStep("results");
-    setScores(DEMO_SCORES);
-
-    // Animate score counter
+    stopCamera(); setStep("results"); setScores(DEMO_SCORES);
     let s = 0;
-    const interval = setInterval(() => {
-      s += 2;
-      setScoreAnim(Math.min(s, DEMO_SCORES.overall));
-      if (s >= DEMO_SCORES.overall) clearInterval(interval);
-    }, 20);
+    const interval = setInterval(() => { s += 2; setScoreAnim(Math.min(s, DEMO_SCORES.overall)); if (s >= DEMO_SCORES.overall) clearInterval(interval); }, 20);
   };
 
-  // ── Shared styles ─────────────────────────────────────────────────────────
-  const overlayStyle = {
-    position: "fixed", inset: 0, zIndex: 1000,
-    background: "rgba(0,0,0,0.85)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    padding: "20px",
-    backdropFilter: "blur(4px)",
-  };
+  const overlay = { position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(8px)" };
+  const modal   = { background: T.bgSurface, border: `1px solid ${T.borderBase}`, borderRadius: "12px", width: "100%", maxWidth: step === "results" ? "860px" : "760px", maxHeight: "90vh", overflowY: "auto", position: "relative" };
 
-  const modalStyle = {
-    background: "#0d1117",
-    border: "1px solid #21262d",
-    borderRadius: "16px",
-    width: "100%",
-    maxWidth: step === "results" ? "860px" : "780px",
-    maxHeight: "90vh",
-    overflowY: "auto",
-    position: "relative",
-  };
-
-  // ── INTRO STEP ─────────────────────────────────────────────────────────────
+  // INTRO
   if (step === "intro") return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "32px", textAlign: "center" }}>
-          <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "20px", background: "none", border: "none", color: "#666", fontSize: "22px", cursor: "pointer" }}>✕</button>
+    <div style={overlay} onClick={onClose}>
+      <div style={modal} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "32px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
+            <div>
+              <p style={{ fontSize: "11px", color: T.textMuted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 4px" }}>Interactive Demo</p>
+              <h2 style={{ fontSize: "22px", fontWeight: 700, color: T.textPrimary, margin: 0, letterSpacing: "-0.02em" }}>See InterviewQ in action</h2>
+            </div>
+            <button onClick={onClose} style={{ background: "none", border: `1px solid ${T.borderBase}`, color: T.textMuted, width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          </div>
 
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎬</div>
-          <h2 style={{ fontSize: "24px", fontWeight: 900, color: "#fff", marginBottom: "8px" }}>
-            Interactive Demo
-          </h2>
-          <p style={{ color: "#8b949e", marginBottom: "28px", lineHeight: 1.6 }}>
-            Experience a live mock interview with AI evaluation, eye-contact tracking, real-time transcription, and a full performance report.
-          </p>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "28px", textAlign: "left" }}>
-            {[
-              { icon: "📹", label: "Live webcam preview" },
-              { icon: "📝", label: "Real-time transcript" },
-              { icon: "👁️", label: "Eye-contact warning" },
-              { icon: "🤖", label: "AI feedback cards" },
-              { icon: "📊", label: "Score visualization" },
-              { icon: "🎯", label: "Dimension breakdown" },
-            ].map((f) => (
-              <div key={f.label} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "#161b22", border: "1px solid #21262d", borderRadius: "8px" }}>
-                <span style={{ fontSize: "18px" }}>{f.icon}</span>
-                <span style={{ fontSize: "13px", color: "#c9d1d9" }}>{f.label}</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "24px" }}>
+            {[["📹", "Live webcam preview"], ["📝", "Real-time transcript"], ["👁️", "Eye-contact detection"], ["🤖", "AI feedback cards"], ["📊", "Score breakdown"], ["🎯", "Dimension analysis"]].map(([icon, label]) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", background: T.bgCard, border: `1px solid ${T.borderSubtle}`, borderRadius: "8px" }}>
+                <span style={{ fontSize: "15px" }}>{icon}</span>
+                <span style={{ fontSize: "13px", color: T.textSecond }}>{label}</span>
               </div>
             ))}
           </div>
 
-          <button
-            onClick={startDemo}
-            style={{ padding: "14px 36px", background: "linear-gradient(135deg, #06b6d4, #6366f1)", border: "none", borderRadius: "10px", color: "#fff", fontWeight: 800, fontSize: "15px", cursor: "pointer", width: "100%" }}
-          >
-            ▶ Start Demo Interview
+          <button onClick={startDemo} style={{ width: "100%", padding: "12px", background: T.textPrimary, border: "none", borderRadius: "8px", color: "#0A0A0A", fontWeight: 700, fontSize: "14px", cursor: "pointer", letterSpacing: "-0.01em" }}>
+            Start Demo →
           </button>
-          <p style={{ fontSize: "11px", color: "#484f58", marginTop: "10px" }}>
-            Webcam will be requested · No data is stored · Demo only
-          </p>
+          <p style={{ fontSize: "11px", color: T.textDim, textAlign: "center", marginTop: "10px" }}>Webcam requested · No data stored · Demo only</p>
         </div>
       </div>
     </div>
   );
 
-  // ── INTERVIEW STEP ─────────────────────────────────────────────────────────
+  // INTERVIEW
   if (step === "interview") return (
-    <div style={overlayStyle}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+    <div style={overlay}>
+      <div style={modal} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "24px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
             <div>
-              <span style={{ fontSize: "10px", color: "#06b6d4", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em" }}>Live Demo Session</span>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#fff", margin: "4px 0 0" }}>Mock Interview</h2>
+              <p style={{ fontSize: "10px", color: T.textMuted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 4px" }}>Live Demo</p>
+              <h2 style={{ fontSize: "18px", fontWeight: 700, color: T.textPrimary, margin: 0 }}>Mock Interview</h2>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ef4444", display: "inline-block", animation: "pulse 1s infinite" }} />
-              <span style={{ fontSize: "12px", color: "#ef4444", fontWeight: 700 }}>LIVE</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: "999px" }}>
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: T.red, display: "inline-block" }} />
+              <span style={{ fontSize: "11px", color: T.red, fontWeight: 600 }}>LIVE</span>
             </div>
           </div>
 
-          {/* Eye Contact Warning */}
           {showWarning && (
-            <div style={{ background: "#ff000015", border: "1px solid #ef4444", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px", animation: "slideIn 0.3s ease" }}>
-              <span style={{ fontSize: "20px" }}>👁️</span>
+            <div style={{ background: "rgba(248,113,113,0.06)", border: `1px solid rgba(248,113,113,0.2)`, borderRadius: "8px", padding: "10px 14px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "16px" }}>👁️</span>
               <div>
-                <p style={{ fontSize: "13px", fontWeight: 700, color: "#ef4444", margin: 0 }}>Eye Contact Warning</p>
-                <p style={{ fontSize: "11px", color: "#8b949e", margin: 0 }}>Please look directly at the camera</p>
+                <p style={{ fontSize: "13px", fontWeight: 600, color: T.red, margin: 0 }}>Eye Contact Warning</p>
+                <p style={{ fontSize: "11px", color: T.textMuted, margin: 0 }}>Please look directly at the camera</p>
               </div>
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-
-            {/* Webcam */}
-            <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: "10px", overflow: "hidden" }}>
-              <div style={{ padding: "10px 14px", borderBottom: "1px solid #21262d", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "13px", fontWeight: 700, color: "#c9d1d9" }}>📹 Webcam</span>
-                <span style={{ fontSize: "10px", padding: "2px 8px", background: "#0d4429", border: "1px solid #1a7f37", borderRadius: "999px", color: "#3fb950", fontWeight: 700 }}>● LIVE</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+            <div style={{ background: T.bgCard, border: `1px solid ${T.borderBase}`, borderRadius: "10px", overflow: "hidden" }}>
+              <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "12px", fontWeight: 600, color: T.textSecond }}>Webcam</span>
+                <span style={{ fontSize: "10px", padding: "2px 8px", background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: "999px", color: T.green, fontWeight: 600 }}>● LIVE</span>
               </div>
-              <div style={{ position: "relative", minHeight: "180px", background: "#010409", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", height: "180px", objectFit: "cover" }} />
+              <div style={{ minHeight: "160px", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", height: "160px", objectFit: "cover" }} />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", padding: "10px" }}>
-                {[
-                  { label: "Eye Contact", value: `${eyeScore}%`, color: "#3fb950" },
-                  { label: "Facial Tone", value: "😊", color: "#06b6d4" },
-                  { label: "Engagement", value: "High", color: "#f4a426" },
-                ].map((m) => (
-                  <div key={m.label} style={{ textAlign: "center", padding: "6px", background: "#010409", borderRadius: "6px", border: "1px solid #21262d" }}>
-                    <p style={{ fontSize: "9px", color: "#484f58", margin: "0 0 2px" }}>{m.label}</p>
-                    <p style={{ fontSize: "13px", fontWeight: 800, color: m.color, margin: 0 }}>{m.value}</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px", padding: "10px" }}>
+                {[{ label: "Eye Contact", value: `${eyeScore}%`, color: T.green }, { label: "Expression", value: "😊", color: T.blue }, { label: "Engagement", value: "High", color: T.amber }].map((m) => (
+                  <div key={m.label} style={{ textAlign: "center", padding: "6px", background: T.bgSurface, borderRadius: "6px", border: `1px solid ${T.borderSubtle}` }}>
+                    <p style={{ fontSize: "9px", color: T.textDim, margin: "0 0 2px", fontWeight: 600, textTransform: "uppercase" }}>{m.label}</p>
+                    <p style={{ fontSize: "13px", fontWeight: 700, color: m.color, margin: 0 }}>{m.value}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Question */}
-            <div style={{ background: "#161b22", border: "1px solid #21262d", borderLeft: "4px solid #06b6d4", borderRadius: "10px", padding: "18px", display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <span style={{ padding: "2px 8px", background: "#0d1f2e", border: "1px solid #1f6feb", borderRadius: "4px", fontSize: "10px", color: "#58a6ff", fontWeight: 700 }}>Q1</span>
-                <span style={{ padding: "2px 8px", background: "#0d1f2e", border: "1px solid #1f6feb", borderRadius: "4px", fontSize: "10px", color: "#58a6ff", fontWeight: 600 }}>Behavioral</span>
+            <div style={{ background: T.bgCard, border: `1px solid ${T.borderBase}`, borderLeft: `2px solid ${T.textPrimary}`, borderRadius: "10px", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <span style={{ padding: "2px 8px", background: T.bgElevated, border: `1px solid ${T.borderBase}`, borderRadius: "4px", fontSize: "10px", color: T.textSecond, fontWeight: 600 }}>Q1</span>
+                <span style={{ padding: "2px 8px", background: T.bgElevated, border: `1px solid ${T.borderBase}`, borderRadius: "4px", fontSize: "10px", color: T.textSecond, fontWeight: 600 }}>Behavioral</span>
               </div>
-              <p style={{ fontSize: "15px", fontWeight: 700, color: "#fff", lineHeight: 1.5, margin: 0 }}>
-                {DEMO_QUESTION}
-              </p>
-              <div style={{ padding: "10px", background: "#010409", border: "1px solid #21262d", borderRadius: "6px" }}>
-                <p style={{ fontSize: "11px", color: "#8b949e", margin: 0 }}>
-                  💡 <strong style={{ color: "#c9d1d9" }}>Tip:</strong> Use the Present–Past–Future structure. Keep it under 2 minutes.
-                </p>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: T.textPrimary, lineHeight: 1.5, margin: 0 }}>{DEMO_QUESTION}</p>
+              <div style={{ padding: "8px 10px", background: T.bgSurface, border: `1px solid ${T.borderSubtle}`, borderRadius: "6px" }}>
+                <p style={{ fontSize: "11px", color: T.textMuted, margin: 0 }}>Use Present–Past–Future structure. Keep it under 2 minutes.</p>
               </div>
-
-              <button
-                onClick={showResults}
-                style={{ marginTop: "auto", padding: "10px", background: "linear-gradient(135deg,#06b6d4,#6366f1)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: 700, fontSize: "13px", cursor: "pointer" }}
-              >
-                🏁 Finish & See AI Results →
+              <button onClick={showResults} style={{ marginTop: "auto", padding: "10px", background: T.textPrimary, border: "none", borderRadius: "8px", color: "#0A0A0A", fontWeight: 700, fontSize: "13px", cursor: "pointer" }}>
+                Finish & See Results →
               </button>
             </div>
           </div>
 
-          {/* Live Transcript */}
-          <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: "10px", padding: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-              <span style={{ fontSize: "13px", fontWeight: 700, color: "#c9d1d9" }}>
-                <span style={{ width: "4px", height: "14px", background: "#06b6d4", display: "inline-block", borderRadius: "2px", marginRight: "8px", verticalAlign: "middle" }} />
-                Live Transcript
-              </span>
-              <span style={{ fontSize: "11px", color: isTyping ? "#ef4444" : "#484f58" }}>
-                {isTyping ? "🔴 Transcribing..." : "● Ready"}
-              </span>
+          <div style={{ background: T.bgCard, border: `1px solid ${T.borderBase}`, borderRadius: "10px", padding: "14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+              <span style={{ fontSize: "12px", fontWeight: 600, color: T.textSecond }}>Live Transcript</span>
+              <span style={{ fontSize: "11px", color: isTyping ? T.red : T.textDim }}>{isTyping ? "🔴 Transcribing..." : "Ready"}</span>
             </div>
-            <div style={{ minHeight: "70px", background: "#010409", border: "1px solid #21262d", borderRadius: "6px", padding: "12px", fontSize: "13px", color: "#c9d1d9", lineHeight: 1.7 }}>
-              {transcript || <span style={{ color: "#484f58" }}>Listening for speech…</span>}
-              {isTyping && <span style={{ animation: "blink 1s infinite", color: "#06b6d4" }}>|</span>}
+            <div style={{ minHeight: "60px", background: T.bgSurface, border: `1px solid ${T.borderSubtle}`, borderRadius: "6px", padding: "10px", fontSize: "13px", color: T.textSecond, lineHeight: 1.7 }}>
+              {transcript || <span style={{ color: T.textDim }}>Listening for speech…</span>}
+              {isTyping && <span style={{ color: T.textPrimary }}>|</span>}
             </div>
-            <p style={{ fontSize: "11px", color: "#484f58", marginTop: "6px" }}>
-              {transcript.split(/\s+/).filter(Boolean).length} words · AI transcription demo
-            </p>
           </div>
         </div>
       </div>
     </div>
   );
 
-  // ── RESULTS STEP ──────────────────────────────────────────────────────────
+  // RESULTS
   if (step === "results" && scores) return (
-    <div style={overlayStyle}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+    <div style={overlay}>
+      <div style={modal} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "24px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
             <div>
-              <span style={{ fontSize: "10px", color: "#06b6d4", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em" }}>Demo Results</span>
-              <h2 style={{ fontSize: "20px", fontWeight: 900, color: "#fff", margin: "4px 0 0" }}>AI Performance Report</h2>
+              <p style={{ fontSize: "10px", color: T.textMuted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 4px" }}>Demo Results</p>
+              <h2 style={{ fontSize: "18px", fontWeight: 700, color: T.textPrimary, margin: 0 }}>AI Performance Report</h2>
             </div>
-            <button onClick={onClose} style={{ background: "none", border: "none", color: "#666", fontSize: "20px", cursor: "pointer" }}>✕</button>
+            <button onClick={onClose} style={{ background: "none", border: `1px solid ${T.borderBase}`, color: T.textMuted, width: "32px", height: "32px", borderRadius: "6px", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
           </div>
 
           {/* Score hero */}
-          <div style={{ background: "#161b22", border: "1px solid #21262d", borderLeft: "4px solid #3fb950", borderRadius: "10px", padding: "20px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "24px" }}>
+          <div style={{ background: T.bgCard, border: `1px solid ${T.borderBase}`, borderRadius: "10px", padding: "20px", marginBottom: "12px", display: "flex", alignItems: "center", gap: "20px" }}>
             <div style={{ textAlign: "center", flexShrink: 0 }}>
-              <div style={{ width: "90px", height: "90px", borderRadius: "50%", background: "#0d4429", border: "3px solid #3fb950", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: "28px", fontWeight: 900, color: "#3fb950" }}>{scoreAnim}</span>
-                <span style={{ fontSize: "10px", color: "#484f58" }}>/100</span>
+              <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: T.bgElevated, border: `2px solid ${T.borderStrong}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: "26px", fontWeight: 700, color: T.textPrimary, lineHeight: 1 }}>{scoreAnim}</span>
+                <span style={{ fontSize: "10px", color: T.textMuted }}>/100</span>
               </div>
-              <p style={{ fontSize: "10px", color: "#484f58", margin: "6px 0 0", fontWeight: 700, textTransform: "uppercase" }}>Overall</p>
+              <p style={{ fontSize: "10px", color: T.textMuted, margin: "6px 0 0", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Overall</p>
             </div>
             <div>
-              <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#fff", margin: "0 0 6px" }}>Great performance! 🎉</h3>
-              <p style={{ fontSize: "12px", color: "#8b949e", margin: 0, lineHeight: 1.6 }}>
-                Strong communication score with excellent answer architecture. Eye contact consistency can be improved for a higher overall score.
-              </p>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, color: T.textPrimary, margin: "0 0 6px" }}>Strong performance</h3>
+              <p style={{ fontSize: "12px", color: T.textSecond, margin: 0, lineHeight: 1.6 }}>Communication and answer architecture scored above average. Eye contact consistency has room to improve.</p>
             </div>
           </div>
 
-          {/* 4 Score cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "10px", marginBottom: "16px" }}>
-            {[
-              { label: "Confidence",     value: scores.confidence,    color: "#58a6ff", bg: "#0d1f2e", border: "#1f6feb" },
-              { label: "Communication",  value: scores.communication, color: "#bc8cff", bg: "#1a0d2e", border: "#6e40c9" },
-              { label: "Attention",      value: scores.attention,     color: "#f4a426", bg: "#1f1500", border: "#7d4e00" },
-              { label: "Overall",        value: scores.overall,       color: "#3fb950", bg: "#0d4429", border: "#1a7f37" },
-            ].map((s) => (
-              <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: "8px", padding: "14px", textAlign: "center" }}>
-                <p style={{ fontSize: "10px", color: "#8b949e", margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase" }}>{s.label}</p>
-                <p style={{ fontSize: "24px", fontWeight: 900, color: s.color, margin: 0 }}>{s.value}</p>
-                <p style={{ fontSize: "10px", color: "#484f58", margin: 0 }}>/100</p>
+          {/* 4 score cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "8px", marginBottom: "12px" }}>
+            {[["Confidence", scores.confidence], ["Communication", scores.communication], ["Attention", scores.attention], ["Overall", scores.overall]].map(([label, val]) => (
+              <div key={label} style={{ background: T.bgCard, border: `1px solid ${T.borderBase}`, borderRadius: "8px", padding: "12px", textAlign: "center" }}>
+                <p style={{ fontSize: "10px", color: T.textMuted, margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</p>
+                <p style={{ fontSize: "22px", fontWeight: 700, color: T.textPrimary, margin: 0, letterSpacing: "-0.02em" }}>{val}</p>
+                <p style={{ fontSize: "10px", color: T.textDim, margin: 0 }}>/100</p>
               </div>
             ))}
           </div>
 
           {/* Dimension bars */}
-          <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
-            <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#c9d1d9", margin: "0 0 14px" }}>📊 Dimension Breakdown</h4>
+          <div style={{ background: T.bgCard, border: `1px solid ${T.borderBase}`, borderRadius: "10px", padding: "16px", marginBottom: "12px" }}>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: T.textSecond, margin: "0 0 12px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Dimension Breakdown</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              {[
-                { label: "Subject Matter Authority", score: scores.dimensions.subjectMatterAuthority, color: "#3fb950" },
-                { label: "Persuasive Authority",     score: scores.dimensions.persuasiveAuthority,    color: "#58a6ff" },
-                { label: "Answer Architecture",      score: scores.dimensions.answerArchitecture,     color: "#bc8cff" },
-                { label: "Emotional Intelligence",   score: scores.dimensions.emotionalIntelligence,  color: "#f4a426" },
-                { label: "Response Timing",          score: scores.dimensions.responseTiming,         color: "#3fb950" },
-                { label: "Presence & Engagement",    score: scores.dimensions.presenceEngagement,     color: "#58a6ff" },
-              ].map((d) => (
-                <div key={d.label}>
+              {[["Subject Matter Authority", scores.dimensions.subjectMatterAuthority], ["Persuasive Authority", scores.dimensions.persuasiveAuthority], ["Answer Architecture", scores.dimensions.answerArchitecture], ["Emotional Intelligence", scores.dimensions.emotionalIntelligence], ["Response Timing", scores.dimensions.responseTiming], ["Presence & Engagement", scores.dimensions.presenceEngagement]].map(([label, score]) => (
+                <div key={label}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "4px" }}>
-                    <span style={{ color: "#8b949e" }}>{d.label}</span>
-                    <span style={{ color: d.color, fontWeight: 700 }}>{d.score}%</span>
+                    <span style={{ color: T.textSecond }}>{label}</span>
+                    <span style={{ color: T.textPrimary, fontWeight: 600 }}>{score}%</span>
                   </div>
-                  <div style={{ height: "5px", background: "#21262d", borderRadius: "3px", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${d.score}%`, background: d.color, borderRadius: "3px", transition: "width 1s ease" }} />
+                  <div style={{ height: "3px", background: T.borderSubtle, borderRadius: "999px", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${score}%`, background: T.textPrimary, borderRadius: "999px", transition: "width 1s ease" }} />
                   </div>
                 </div>
               ))}
@@ -389,37 +275,22 @@ function DemoModal({ onClose }) {
           </div>
 
           {/* AI Feedback */}
-          <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
-            <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#c9d1d9", margin: "0 0 12px" }}>🤖 Gemini AI Feedback</h4>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              {[
-                { icon: "🧠", label: "Content Quality",  text: scores.feedback.contentQuality,  color: "#3fb950", bg: "#0d4429", border: "#1a7f37" },
-                { icon: "🎙️", label: "Vocal Delivery",   text: scores.feedback.vocalDelivery,   color: "#58a6ff", bg: "#0d1f2e", border: "#1f6feb" },
-                { icon: "🪞", label: "Body Language",    text: scores.feedback.bodyLanguage,    color: "#bc8cff", bg: "#1a0d2e", border: "#6e40c9" },
-                { icon: "📋", label: "Answer Structure", text: scores.feedback.answerStructure, color: "#f4a426", bg: "#1f1500", border: "#7d4e00" },
-              ].map((fb) => (
-                <div key={fb.label} style={{ background: fb.bg, border: `1px solid ${fb.border}`, borderRadius: "8px", padding: "12px" }}>
-                  <p style={{ fontSize: "12px", fontWeight: 700, color: fb.color, margin: "0 0 6px" }}>{fb.icon} {fb.label}</p>
-                  <p style={{ fontSize: "11px", color: "#8b949e", margin: 0, lineHeight: 1.6 }}>{fb.text}</p>
+          <div style={{ background: T.bgCard, border: `1px solid ${T.borderBase}`, borderRadius: "10px", padding: "16px", marginBottom: "12px" }}>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: T.textSecond, margin: "0 0 12px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Gemini AI Feedback</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              {[["Content Quality", scores.feedback.contentQuality], ["Vocal Delivery", scores.feedback.vocalDelivery], ["Body Language", scores.feedback.bodyLanguage], ["Answer Structure", scores.feedback.answerStructure]].map(([label, text]) => (
+                <div key={label} style={{ background: T.bgSurface, border: `1px solid ${T.borderSubtle}`, borderRadius: "8px", padding: "12px" }}>
+                  <p style={{ fontSize: "11px", fontWeight: 600, color: T.textSecond, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</p>
+                  <p style={{ fontSize: "11px", color: T.textMuted, margin: 0, lineHeight: 1.6 }}>{text}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* CTA */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            <button
-              onClick={() => { onClose(); }}
-              style={{ padding: "12px", background: "transparent", border: "2px solid #21262d", borderRadius: "8px", color: "#8b949e", fontWeight: 700, fontSize: "13px", cursor: "pointer" }}
-            >
-              ✕ Close Demo
-            </button>
-            <button
-              onClick={() => { onClose(); navigate("/auth"); }}
-              style={{ padding: "12px", background: "linear-gradient(135deg,#06b6d4,#6366f1)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: 700, fontSize: "13px", cursor: "pointer" }}
-            >
-              🚀 Start Real Interview →
-            </button>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            <button onClick={onClose} style={{ padding: "11px", background: "transparent", border: `1px solid ${T.borderBase}`, borderRadius: "8px", color: T.textSecond, fontWeight: 600, fontSize: "13px", cursor: "pointer" }}>Close Demo</button>
+            <button onClick={() => { onClose(); navigate("/auth"); }} style={{ padding: "11px", background: T.textPrimary, border: "none", borderRadius: "8px", color: "#0A0A0A", fontWeight: 700, fontSize: "13px", cursor: "pointer" }}>Start Real Interview →</button>
           </div>
         </div>
       </div>
@@ -429,148 +300,175 @@ function DemoModal({ onClose }) {
   return null;
 }
 
-// ── Main Landing Page ──────────────────────────────────────────────────────────
+// ── Main Landing Page ─────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
   const [showDemo, setShowDemo] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#060810] text-white font-sans">
+    // ✅ CHANGE 2: background updated to linear-gradient
+    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #0f2520 0%, #0A0A0A 45%)", fontFamily: "'Inter', -apple-system, sans-serif", color: T.textSecond }}>
       {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
-      <Navbar />
 
-      {/* HERO */}
-      <section className="relative overflow-hidden pt-32 pb-24 px-6">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-24 left-1/4 w-[300px] h-[300px] bg-indigo-600/10 rounded-full blur-[80px] pointer-events-none" />
+      {/* ── Navbar ── */}
+      {/* ✅ CHANGE 1: navbar background updated to rgba(15,37,32,0.92) */}
+      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, height: "56px", background: "rgba(15,37,32,0.92)", borderBottom: `1px solid ${T.borderSubtle}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", zIndex: 50, backdropFilter: "blur(12px)" }}>
+        <span style={{ fontSize: "15px", fontWeight: 700, color: T.textPrimary, letterSpacing: "-0.03em", cursor: "pointer" }} onClick={() => navigate("/")}>
+          InterviewQ
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <button onClick={() => setShowDemo(true)} style={{ padding: "7px 14px", background: "transparent", border: `1px solid ${T.borderBase}`, borderRadius: "6px", color: T.textSecond, fontSize: "13px", fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }}
+            onMouseOver={(e) => { e.currentTarget.style.borderColor = T.borderStrong; e.currentTarget.style.color = T.textPrimary; }}
+            onMouseOut={(e)  => { e.currentTarget.style.borderColor = T.borderBase;   e.currentTarget.style.color = T.textSecond; }}
+          >Demo</button>
+          <button onClick={() => navigate("/auth")} style={{ padding: "7px 16px", background: T.textPrimary, border: "none", borderRadius: "6px", color: "#0A0A0A", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "#E8E3DB")}
+            onMouseOut={(e)  => (e.currentTarget.style.background = T.textPrimary)}
+          >Get Started</button>
+        </div>
+      </nav>
 
-        <div className="relative max-w-5xl mx-auto text-center">
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-mono mb-8 tracking-widest uppercase">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            Multimodal AI · Real-Time · Research Grade
-          </span>
+      {/* ── Hero ── */}
+      <section style={{ paddingTop: "140px", paddingBottom: "100px", paddingLeft: "32px", paddingRight: "32px", maxWidth: "860px", margin: "0 auto" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "4px 12px", background: T.bgCard, border: `1px solid ${T.borderBase}`, borderRadius: "999px", marginBottom: "32px" }}>
+          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: T.green, display: "inline-block" }} />
+          <span style={{ fontSize: "12px", color: T.textMuted, fontWeight: 500, letterSpacing: "0.04em" }}>Multimodal AI · Real-Time Evaluation</span>
+        </div>
 
-          <h1 className="text-6xl md:text-7xl font-black leading-none tracking-tight mb-6">
-            <span className="text-white">Interview</span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400">Q</span>
-          </h1>
+        <h1 style={{ fontSize: "clamp(40px, 6vw, 64px)", fontWeight: 700, color: T.textPrimary, letterSpacing: "-0.03em", lineHeight: 1.08, margin: "0 0 20px" }}>
+          Interview performance,<br />evaluated precisely.
+        </h1>
 
-          <p className="text-2xl md:text-3xl font-light text-slate-300 mb-4 leading-snug">
-            A Multimodal AI Framework for
-          </p>
-          <p className="text-2xl md:text-3xl font-semibold text-white mb-8 leading-snug">
-            Real-Time Interview Performance Evaluation
-          </p>
+        <p style={{ fontSize: "17px", color: T.textSecond, lineHeight: 1.7, maxWidth: "540px", margin: "0 0 36px" }}>
+          InterviewQ fuses speech acoustics, facial behaviour, and NLP signals into a single performance index — giving candidates data-driven feedback that actually moves the needle.
+        </p>
 
-          <p className="text-slate-400 max-w-2xl mx-auto mb-12 text-lg leading-relaxed">
-            InterviewQ fuses speech acoustics, facial behaviour, and NLP signals into a unified
-            performance index — giving candidates the edge elite preparation demands.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => navigate("/auth")}
-              className="group relative px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl text-lg transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(6,182,212,0.5)]"
-            >
-              Start Interview
-              <span className="ml-2 group-hover:translate-x-1 inline-block transition-transform">→</span>
-            </button>
-            <button
-              onClick={() => setShowDemo(true)}
-              className="px-8 py-4 border border-slate-700 hover:border-cyan-500 text-slate-300 hover:text-cyan-400 font-semibold rounded-xl text-lg transition-all duration-300 hover:bg-slate-800/50"
-            >
-              View Demo ▶
-            </button>
-          </div>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button onClick={() => navigate("/auth")} style={{ padding: "11px 24px", background: T.textPrimary, border: "none", borderRadius: "8px", color: "#0A0A0A", fontSize: "14px", fontWeight: 600, cursor: "pointer", letterSpacing: "-0.01em" }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "#E8E3DB")}
+            onMouseOut={(e)  => (e.currentTarget.style.background = T.textPrimary)}
+          >Start for free →</button>
+          <button onClick={() => setShowDemo(true)} style={{ padding: "11px 24px", background: "transparent", border: `1px solid ${T.borderBase}`, borderRadius: "8px", color: T.textSecond, fontSize: "14px", fontWeight: 500, cursor: "pointer" }}
+            onMouseOver={(e) => { e.currentTarget.style.borderColor = T.borderStrong; e.currentTarget.style.color = T.textPrimary; }}
+            onMouseOut={(e)  => { e.currentTarget.style.borderColor = T.borderBase;   e.currentTarget.style.color = T.textSecond; }}
+          >View demo</button>
         </div>
       </section>
 
-      {/* STATS BAR */}
-      <section className="border-y border-slate-800 py-10 px-6 bg-slate-900/30">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+      {/* ── Stats ── */}
+      <section style={{ borderTop: `1px solid ${T.borderSubtle}`, borderBottom: `1px solid ${T.borderSubtle}`, padding: "40px 32px" }}>
+        <div style={{ maxWidth: "860px", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "32px" }}>
           {stats.map((s) => (
-            <div key={s.label} className="text-center">
-              <div className="text-4xl font-black text-cyan-400 mb-1">{s.value}</div>
-              <div className="text-slate-500 text-sm uppercase tracking-widest font-mono">{s.label}</div>
+            <div key={s.label}>
+              <p style={{ fontSize: "28px", fontWeight: 700, color: T.textPrimary, margin: "0 0 4px", letterSpacing: "-0.03em" }}>{s.value}</p>
+              <p style={{ fontSize: "12px", color: T.textMuted, margin: 0, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* DESCRIPTION */}
-      <section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-4xl font-black mb-6 leading-tight">
-                Beyond keyword matching.{" "}
-                <span className="text-cyan-400">Beyond gut feel.</span>
-              </h2>
-              <p className="text-slate-400 leading-relaxed mb-4">
-                Traditional mock interview tools score answers based on text similarity alone. InterviewQ captures{" "}
-                <span className="text-slate-200 font-semibold">every dimension of human communication</span> — the words you choose,
-                how your voice projects confidence, and the subtle signals your face reveals.
-              </p>
-              <p className="text-slate-400 leading-relaxed">
-                Built as an academic research framework, the system produces interpretable, multi-dimensional reports
-                that show exactly where performance breaks down and how to fix it — fast.
-              </p>
+      {/* ── How it works ── */}
+      <section style={{ padding: "100px 32px", maxWidth: "860px", margin: "0 auto" }}>
+        <p style={{ fontSize: "11px", color: T.textMuted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "16px" }}>How it works</p>
+        <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, color: T.textPrimary, letterSpacing: "-0.03em", margin: "0 0 56px", lineHeight: 1.15 }}>
+          From upload to insight<br />in four steps.
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px" }}>
+          {process.map((p, i) => (
+            <div key={p.num} style={{ padding: "28px", background: i % 2 === 0 ? T.bgCard : T.bgSurface, border: `1px solid ${T.borderSubtle}`, borderRadius: i === 0 ? "12px 0 0 0" : i === 1 ? "0 12px 0 0" : i === 2 ? "0 0 0 12px" : "0 0 12px 0" }}>
+              <p style={{ fontSize: "11px", color: T.textDim, fontWeight: 600, margin: "0 0 12px", letterSpacing: "0.06em" }}>{p.num}</p>
+              <p style={{ fontSize: "15px", fontWeight: 600, color: T.textPrimary, margin: "0 0 8px", letterSpacing: "-0.01em" }}>{p.title}</p>
+              <p style={{ fontSize: "13px", color: T.textMuted, margin: 0, lineHeight: 1.6 }}>{p.desc}</p>
             </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 font-mono text-sm space-y-3">
-              {[
-                { layer: "INPUT",    items: ["🎤 Audio Stream", "📹 Video Feed", "📝 Transcript"], color: "text-indigo-400" },
-                { layer: "ANALYSIS", items: ["Acoustic Features", "Vision Embeddings", "NLP Vectors"], color: "text-cyan-400" },
-                { layer: "FUSION",   items: ["Multimodal Transformer"], color: "text-emerald-400" },
-                { layer: "OUTPUT",   items: ["Performance Score", "Actionable Report"], color: "text-amber-400" },
-              ].map((row) => (
-                <div key={row.layer} className="flex items-start gap-3">
-                  <span className={`${row.color} font-bold w-20 shrink-0 text-xs pt-0.5`}>{row.layer}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {row.items.map((item) => (
-                      <span key={item} className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 text-xs">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section className="py-20 px-6 bg-slate-900/20">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-4xl font-black mb-4">Core Capabilities</h2>
-            <p className="text-slate-500 max-w-xl mx-auto">
-              Six integrated modules that turn a nervous rehearsal into data-driven mastery.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* ── Features ── */}
+      <section style={{ borderTop: `1px solid ${T.borderSubtle}`, padding: "100px 32px" }}>
+        <div style={{ maxWidth: "860px", margin: "0 auto" }}>
+          <p style={{ fontSize: "11px", color: T.textMuted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "16px" }}>Capabilities</p>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, color: T.textPrimary, letterSpacing: "-0.03em", margin: "0 0 56px", lineHeight: 1.15 }}>
+            Every signal, measured.
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1px", background: T.borderSubtle, border: `1px solid ${T.borderSubtle}`, borderRadius: "12px", overflow: "hidden" }}>
             {features.map((f) => (
-              <FeatureCard key={f.title} {...f} />
+              <div key={f.label} style={{ padding: "24px", background: T.bgBase }}
+                onMouseOver={(e) => (e.currentTarget.style.background = T.bgCard)}
+                onMouseOut={(e)  => (e.currentTarget.style.background = T.bgBase)}
+              >
+                <p style={{ fontSize: "14px", fontWeight: 600, color: T.textPrimary, margin: "0 0 8px", letterSpacing: "-0.01em" }}>{f.label}</p>
+                <p style={{ fontSize: "13px", color: T.textMuted, margin: 0, lineHeight: 1.6 }}>{f.desc}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24 px-6 text-center">
-        <h2 className="text-4xl font-black mb-4">Ready to evaluate your performance?</h2>
-        <p className="text-slate-500 mb-8">Create a free account and run your first AI-evaluated session in minutes.</p>
-        <button
-          onClick={() => navigate("/auth")}
-          className="px-10 py-4 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white font-bold rounded-xl text-lg transition-all duration-300 hover:scale-105 hover:shadow-[0_0_60px_rgba(6,182,212,0.35)]"
-        >
-          Get Started Free
-        </button>
+      {/* ── Architecture diagram ── */}
+      <section style={{ borderTop: `1px solid ${T.borderSubtle}`, padding: "100px 32px" }}>
+        <div style={{ maxWidth: "860px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "center" }}>
+          <div>
+            <p style={{ fontSize: "11px", color: T.textMuted, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "16px" }}>Architecture</p>
+            <h2 style={{ fontSize: "clamp(24px, 3vw, 34px)", fontWeight: 700, color: T.textPrimary, letterSpacing: "-0.03em", margin: "0 0 16px", lineHeight: 1.15 }}>
+              Beyond keyword matching.
+            </h2>
+            <p style={{ fontSize: "14px", color: T.textMuted, lineHeight: 1.7, margin: "0 0 16px" }}>
+              Traditional tools score text similarity alone. InterviewQ captures every dimension of human communication — what you say, how you say it, and what your face reveals.
+            </p>
+            <p style={{ fontSize: "14px", color: T.textMuted, lineHeight: 1.7, margin: 0 }}>
+              The multimodal fusion engine combines these signals into a single interpretable score with actionable breakdowns.
+            </p>
+          </div>
+
+          <div style={{ background: T.bgCard, border: `1px solid ${T.borderBase}`, borderRadius: "12px", padding: "24px", fontFamily: "monospace" }}>
+            {[
+              { layer: "INPUT",    items: ["Audio Stream", "Video Feed", "Transcript"],       color: T.blue },
+              { layer: "ANALYSIS", items: ["Acoustic Model", "Vision API", "NLP Engine"],     color: T.green },
+              { layer: "FUSION",   items: ["Multimodal Transformer"],                          color: T.textPrimary },
+              { layer: "OUTPUT",   items: ["Performance Score", "Actionable Report"],          color: T.amber },
+            ].map((row, i) => (
+              <div key={row.layer} style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: i < 3 ? "16px" : 0 }}>
+                <span style={{ fontSize: "10px", fontWeight: 700, color: T.textDim, width: "64px", flexShrink: 0, paddingTop: "2px", letterSpacing: "0.04em" }}>{row.layer}</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {row.items.map((item) => (
+                    <span key={item} style={{ padding: "3px 8px", background: T.bgSurface, border: `1px solid ${T.borderBase}`, borderRadius: "4px", fontSize: "11px", color: row.color }}>
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-slate-800 py-8 px-6 text-center text-slate-600 text-sm">
-        © 2025 InterviewQ · Multimodal AI Research Framework
+      {/* ── CTA ── */}
+      <section style={{ borderTop: `1px solid ${T.borderSubtle}`, padding: "100px 32px", textAlign: "center" }}>
+        <div style={{ maxWidth: "480px", margin: "0 auto" }}>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, color: T.textPrimary, letterSpacing: "-0.03em", margin: "0 0 14px", lineHeight: 1.15 }}>
+            Start your first session.
+          </h2>
+          <p style={{ fontSize: "15px", color: T.textMuted, margin: "0 0 32px", lineHeight: 1.6 }}>
+            Free to use. No credit card required. Get your first AI performance report in minutes.
+          </p>
+          <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+            <button onClick={() => navigate("/auth")} style={{ padding: "12px 28px", background: T.textPrimary, border: "none", borderRadius: "8px", color: "#0A0A0A", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+              onMouseOver={(e) => (e.currentTarget.style.background = "#E8E3DB")}
+              onMouseOut={(e)  => (e.currentTarget.style.background = T.textPrimary)}
+            >Create free account →</button>
+            <button onClick={() => setShowDemo(true)} style={{ padding: "12px 24px", background: "transparent", border: `1px solid ${T.borderBase}`, borderRadius: "8px", color: T.textSecond, fontSize: "14px", fontWeight: 500, cursor: "pointer" }}
+              onMouseOver={(e) => { e.currentTarget.style.borderColor = T.borderStrong; e.currentTarget.style.color = T.textPrimary; }}
+              onMouseOut={(e)  => { e.currentTarget.style.borderColor = T.borderBase;   e.currentTarget.style.color = T.textSecond; }}
+            >View demo</button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer style={{ borderTop: `1px solid ${T.borderSubtle}`, padding: "24px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: "13px", fontWeight: 700, color: T.textPrimary, letterSpacing: "-0.02em" }}>InterviewQ</span>
+        <span style={{ fontSize: "12px", color: T.textDim }}>© 2025 · Multimodal AI Research Framework</span>
       </footer>
     </div>
   );
