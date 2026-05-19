@@ -61,7 +61,7 @@ export default function ResumePage() {
       localStorage.setItem("iq_resume_questions", JSON.stringify(data.questions));
 
       // Navigate to interview
-      navigate("/interview");
+      navigate("/pre-interview");
 
     } catch (err) {
       setError("Could not connect to server. Make sure your backend is running.");

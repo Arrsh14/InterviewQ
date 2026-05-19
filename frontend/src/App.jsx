@@ -8,6 +8,7 @@ import Features from "./pages/Features";
 import Research from "./pages/Research";
 import Docs from "./pages/Docs";
 import SettingsPage from "./pages/SettingsPage";
+import PreInterviewSetup from "./pages/PreInterviewSetup";
 
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/research" element={<Research />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/pre-interview" element={<PreInterviewSetup />} />
 
       </Routes>
     </Router>

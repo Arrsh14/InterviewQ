@@ -255,7 +255,7 @@ export default function AuthPage() {
       localStorage.setItem("iq_token",      data.token);
       localStorage.setItem("iq_user_name",  data.user?.name  || form.email);
       localStorage.setItem("iq_user_email", data.user?.email || form.email);
-      navigate("/interview");
+      navigate("/dashboard");
     } catch {
       alert("Server error — make sure backend is running!");
     } finally {
@@ -286,7 +286,7 @@ export default function AuthPage() {
         localStorage.setItem("iq_token",      data.token);
         localStorage.setItem("iq_user_name",  data.user?.name  || googleUser.name);
         localStorage.setItem("iq_user_email", data.user?.email || googleUser.email);
-        navigate("/interview");
+        navigate("/dashboard");
       } catch {
         alert("Google login failed — make sure backend is running!");
       } finally {

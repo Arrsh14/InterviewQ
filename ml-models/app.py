@@ -7,6 +7,12 @@ import mediapipe as mp
 import os
 import sys
 
+import time
+
+# ── Rate limiter for Gemini calls ─────────────────────────────────────────────
+_last_gemini_call = 0
+_gemini_cooldown  = 30  # seconds between Gemini calls
+
 # ── Import OpenCV scripts ─────────────────────────────────────────────────────
 sys.path.append(os.path.join(os.path.dirname(__file__), "opencv"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "nlp"))
@@ -152,8 +158,39 @@ def analyse_nlp():
             print(f"Grammar error: {e}")
             results["grammar"] = { "grammar_score": 5, "total_errors": 0 }
 
-        # ── STAR method — skipped (uses Gemini, handled by Node backend) ──────
-        results["star"] = { "score": 5, "feedback": "Evaluated by Gemini on backend" }
+        # ── STAR method analysis ──────────────────────────────────────────────
+        
+        try:
+            global _last_gemini_call
+            now          = time.time()
+            question     = data.get("question", "Tell me about yourself")
+            star_tracker = STARTracker()
+
+            if now - _last_gemini_call >= _gemini_cooldown:
+                _last_gemini_call = now
+                star_result = star_tracker.analyze(question, transcript)
+            else:
+                star_result = None
+                print(f"Gemini rate limited — skipping ({int(_gemini_cooldown - (now - _last_gemini_call))}s remaining)")
+
+            if star_result:
+                results["star"] = {
+                    "star_score":      star_result["star_score"],
+                    "relevance_score": star_result["relevance_score"],
+                    "overall_score":   star_result["overall_score"],
+                    "feedback":        star_result["feedback"],
+                    "improvement":     star_result["improvement"],
+                    "situation":       star_result["situation"],
+                    "task":            star_result["task"],
+                    "action":          star_result["action"],
+                    "result":          star_result["result"],
+                    "relevance":       star_result["relevance"],
+                }
+            else:
+                results["star"] = { "star_score": 5, "relevance_score": 5, "overall_score": 5 }
+        except Exception as e:
+            print(f"STAR error: {e}")
+            results["star"] = { "star_score": 5, "relevance_score": 5, "overall_score": 5 }
 
         # ── Confidence analysis ───────────────────────────────────────────────
         try:
@@ -175,11 +212,13 @@ def analyse_nlp():
         grammar_score = results["grammar"].get("grammar_score",       5) * 10
         conf_score    = results["confidence"].get("confidence_score", 5) * 10
 
+        star_score_val = results["star"].get("overall_score", 5) * 10
         nlp_score = int(
-            filler_score  * 0.3 +
-            grammar_score * 0.4 +
-            conf_score    * 0.3
-        )
+            filler_score   * 0.25 +
+            grammar_score  * 0.25 +
+            conf_score     * 0.25 +
+            star_score_val * 0.25
+)
 
         results["nlp_score"] = nlp_score
         results["success"]   = True

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 // Each item knows its own route
 const navItems = [
   { icon: "⊞",  label: "Dashboard",     route: "/dashboard"  },
-  { icon: "🎙",  label: "Interviews",    route: "/interview"  },
+  { icon: "🎙",  label: "Interviews",    route: "/pre-interview"  },
   { icon: "📊",  label: "Analytics",     route: "/dashboard"  },
   { icon: "📋",  label: "Results",       route: "/results"    },
   { icon: "🎯",  label: "Question Bank", route: "/dashboard"  },

@@ -68,45 +68,63 @@ function SettingsRow({ label, sublabel, children, last = false }) {
 
 // ── Main Settings Page ────────────────────────────────────────────────────────
 export default function SettingsPage() {
-  const navigate  = useNavigate();
-  const userName  = localStorage.getItem("iq_user_name")  || "User";
+  const navigate = useNavigate();
+  const userName = localStorage.getItem("iq_user_name") || "User";
   const userEmail = localStorage.getItem("iq_user_email") || "user@example.com";
 
   // ── Profile state ──────────────────────────────────────────────────────────
-  const [name,  setName]  = useState(userName);
+  const [name, setName] = useState(userName);
   const [email, setEmail] = useState(userEmail);
-  const [role,  setRole]  = useState("CS Student");
+  const [role, setRole] = useState("CS Student");
   const [saved, setSaved] = useState(false);
 
   // ── Interview preferences ──────────────────────────────────────────────────
-  const [questionCount,  setQuestionCount]  = useState("5");
-  const [timePerQ,       setTimePerQ]       = useState("120");
-  const [interviewTrack, setInterviewTrack] = useState("general");
-  const [difficulty,     setDifficulty]     = useState("medium");
+  const [questionCount, setQuestionCount] = useState(localStorage.getItem("iq_question_count") || "5");
+  const [timePerQ, setTimePerQ] = useState(localStorage.getItem("iq_time_per_q") || "120");
+  const [interviewTrack, setInterviewTrack] = useState(localStorage.getItem("iq_track") || "general");
+  const [difficulty, setDifficulty] = useState(localStorage.getItem("iq_difficulty") || "medium");
+
 
   // ── AI & detection toggles ─────────────────────────────────────────────────
-  const [eyeContactDetection, setEyeContactDetection] = useState(true);
-  const [facialAnalysis,      setFacialAnalysis]      = useState(true);
-  const [speechTranscription, setSpeechTranscription] = useState(true);
-  const [nlpScoring,          setNlpScoring]          = useState(true);
-  const [postureDetection,    setPostureDetection]    = useState(false);
-  const [autoNextQuestion,    setAutoNextQuestion]    = useState(false);
+  const [eyeContactDetection, setEyeContactDetection] = useState(
+    localStorage.getItem("iq_eye_contact") !== "false"
+  );
+  const [facialAnalysis, setFacialAnalysis] = useState(
+    localStorage.getItem("iq_facial_analysis") !== "false"
+  );
+  const [speechTranscription, setSpeechTranscription] = useState(
+    localStorage.getItem("iq_speech_transcription") !== "false"
+  );
+  const [nlpScoring, setNlpScoring] = useState(
+    localStorage.getItem("iq_nlp_scoring") !== "false"
+  );
+  const [postureDetection, setPostureDetection] = useState(
+    localStorage.getItem("iq_posture_detection") === "true"
+  );
+  const [autoNextQuestion, setAutoNextQuestion] = useState(
+    localStorage.getItem("iq_auto_next") === "true"
+  );
 
   // ── Notification toggles ───────────────────────────────────────────────────
-  const [eyeContactAlerts,  setEyeContactAlerts]  = useState(true);
-  const [timerWarnings,     setTimerWarnings]     = useState(true);
-  const [sessionSummary,    setSessionSummary]    = useState(true);
-  const [emailReports,      setEmailReports]      = useState(false);
+  const [eyeContactAlerts, setEyeContactAlerts] = useState(true);
+  const [timerWarnings, setTimerWarnings] = useState(true);
+  const [sessionSummary, setSessionSummary] = useState(true);
+  const [emailReports, setEmailReports] = useState(false);
 
   // ── Privacy toggles ───────────────────────────────────────────────────────
-  const [saveTranscripts,  setSaveTranscripts]  = useState(true);
-  const [saveVideoFrames,  setSaveVideoFrames]  = useState(false);
-  const [analytics,        setAnalytics]        = useState(true);
+  const [saveTranscripts, setSaveTranscripts] = useState(true);
+  const [saveVideoFrames, setSaveVideoFrames] = useState(false);
+  const [analytics, setAnalytics] = useState(true);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSaveProfile = () => {
-    localStorage.setItem("iq_user_name",  name);
+    localStorage.setItem("iq_user_name", name);
     localStorage.setItem("iq_user_email", email);
+    localStorage.setItem("iq_user_role", role);
+    localStorage.setItem("iq_question_count", questionCount);
+    localStorage.setItem("iq_time_per_q", timePerQ);
+    localStorage.setItem("iq_track", interviewTrack);
+    localStorage.setItem("iq_difficulty", difficulty);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -172,19 +190,19 @@ export default function SettingsPage() {
           <SettingsRow label="Full Name" sublabel="This appears on your dashboard and reports">
             <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle}
               onFocus={(e) => (e.target.style.borderColor = "#2f8d46")}
-              onBlur={(e)  => (e.target.style.borderColor = "#e8e8e8")} />
+              onBlur={(e) => (e.target.style.borderColor = "#e8e8e8")} />
           </SettingsRow>
 
           <SettingsRow label="Email Address" sublabel="Used for login and report delivery">
             <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle}
               onFocus={(e) => (e.target.style.borderColor = "#2f8d46")}
-              onBlur={(e)  => (e.target.style.borderColor = "#e8e8e8")} />
+              onBlur={(e) => (e.target.style.borderColor = "#e8e8e8")} />
           </SettingsRow>
 
           <SettingsRow label="Role / Title" sublabel="Helps personalise interview questions" last>
             <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. CS Student, Developer" style={inputStyle}
               onFocus={(e) => (e.target.style.borderColor = "#2f8d46")}
-              onBlur={(e)  => (e.target.style.borderColor = "#e8e8e8")} />
+              onBlur={(e) => (e.target.style.borderColor = "#e8e8e8")} />
           </SettingsRow>
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px", gap: "10px" }}>
@@ -192,7 +210,7 @@ export default function SettingsPage() {
             <button onClick={handleSaveProfile}
               style={{ padding: "9px 22px", borderRadius: "6px", background: "#2f8d46", color: "#fff", fontWeight: 700, fontSize: "13px", border: "none", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif", transition: "background 0.2s" }}
               onMouseOver={(e) => (e.currentTarget.style.background = "#257a3c")}
-              onMouseOut={(e)  => (e.currentTarget.style.background = "#2f8d46")}
+              onMouseOut={(e) => (e.currentTarget.style.background = "#2f8d46")}
             >Save Changes</button>
           </div>
         </SettingsSection>
@@ -238,27 +256,27 @@ export default function SettingsPage() {
         {/* ── 3. AI & Detection ── */}
         <SettingsSection title="AI & Detection" accent="#7b5ea7">
           <SettingsRow label="Eye Contact Detection" sublabel="Real-time gaze tracking using face-api.js — shows warning when you look away">
-            <Toggle checked={eyeContactDetection} onChange={setEyeContactDetection} />
+            <Toggle checked={eyeContactDetection} onChange={(v) => { setEyeContactDetection(v); localStorage.setItem("iq_eye_contact", v); }} />
           </SettingsRow>
 
           <SettingsRow label="Facial Expression Analysis" sublabel="Detects engagement, emotion, and composure via webcam">
-            <Toggle checked={facialAnalysis} onChange={setFacialAnalysis} />
+            <Toggle checked={facialAnalysis} onChange={(v) => { setFacialAnalysis(v); localStorage.setItem("iq_facial_analysis", v); }} />
           </SettingsRow>
 
           <SettingsRow label="Speech Transcription" sublabel="Live speech-to-text using Web Speech API">
-            <Toggle checked={speechTranscription} onChange={setSpeechTranscription} />
+            <Toggle checked={speechTranscription} onChange={(v) => { setSpeechTranscription(v); localStorage.setItem("iq_speech_transcription", v); }} />
           </SettingsRow>
 
           <SettingsRow label="NLP Scoring" sublabel="Gemini AI evaluates answer quality, structure, and vocabulary">
-            <Toggle checked={nlpScoring} onChange={setNlpScoring} />
+            <Toggle checked={nlpScoring} onChange={(v) => { setNlpScoring(v); localStorage.setItem("iq_nlp_scoring", v); }} />
           </SettingsRow>
 
           <SettingsRow label="Posture Detection" sublabel="Uses ML model to assess body posture via webcam (requires Python server)">
-            <Toggle checked={postureDetection} onChange={setPostureDetection} />
+            <Toggle checked={postureDetection} onChange={(v) => { setPostureDetection(v); localStorage.setItem("iq_posture_detection", v); }} />
           </SettingsRow>
 
           <SettingsRow label="Auto-advance Questions" sublabel="Automatically move to next question when timer expires" last>
-            <Toggle checked={autoNextQuestion} onChange={setAutoNextQuestion} />
+            <Toggle checked={autoNextQuestion} onChange={(v) => { setAutoNextQuestion(v); localStorage.setItem("iq_auto_next", v); }} />
           </SettingsRow>
         </SettingsSection>
 
@@ -322,7 +340,7 @@ export default function SettingsPage() {
               onClick={handleLogout}
               style={{ padding: "7px 16px", borderRadius: "6px", background: "transparent", border: "1px solid #e8e8e8", color: "#444", fontWeight: 600, fontSize: "12px", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif", transition: "all 0.2s" }}
               onMouseOver={(e) => { e.currentTarget.style.borderColor = "#e53935"; e.currentTarget.style.color = "#e53935"; }}
-              onMouseOut={(e)  => { e.currentTarget.style.borderColor = "#e8e8e8"; e.currentTarget.style.color = "#444"; }}
+              onMouseOut={(e) => { e.currentTarget.style.borderColor = "#e8e8e8"; e.currentTarget.style.color = "#444"; }}
             >
               Sign Out
             </button>
@@ -333,7 +351,7 @@ export default function SettingsPage() {
               onClick={handleDeleteAccount}
               style={{ padding: "7px 16px", borderRadius: "6px", background: "#fff5f5", border: "1px solid #ffcccc", color: "#e53935", fontWeight: 700, fontSize: "12px", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif", transition: "all 0.2s" }}
               onMouseOver={(e) => { e.currentTarget.style.background = "#e53935"; e.currentTarget.style.color = "#fff"; }}
-              onMouseOut={(e)  => { e.currentTarget.style.background = "#fff5f5"; e.currentTarget.style.color = "#e53935"; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = "#fff5f5"; e.currentTarget.style.color = "#e53935"; }}
             >
               Delete Account
             </button>

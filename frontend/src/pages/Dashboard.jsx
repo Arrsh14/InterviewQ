@@ -68,7 +68,7 @@ export default function Dashboard() {
           </div>
 
           <button
-            onClick={() => navigate("/interview")}
+            onClick={() => navigate("/pre-interview")}
             style={{
               padding: "10px 22px",
               borderRadius: "6px",
@@ -231,7 +231,7 @@ export default function Dashboard() {
                 Start your first AI-evaluated session and your results will appear here.
               </p>
               <button
-                onClick={() => navigate("/interview")}
+                onClick={() => navigate("/pre-interview")}
                 style={{
                   marginTop: "8px",
                   padding: "9px 22px",

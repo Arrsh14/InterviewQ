@@ -65,7 +65,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 slide-up"
           style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
           <button
-            onClick={() => navigate('/interview')}
+            onClick={() => navigate('/pre-interview')}
             className="btn-hex flex items-center gap-2 text-sm"
           >
             Start Interview
@@ -155,7 +155,7 @@ export default function HomePage() {
             No account needed. Just allow camera access and start practicing immediately.
           </p>
           <button
-            onClick={() => navigate('/interview')}
+            onClick={() => navigate('/pre-interview')}
             className="btn-hex text-sm"
           >
             Launch Interview Session

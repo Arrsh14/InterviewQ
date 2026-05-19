@@ -236,7 +236,7 @@ export default function ResultsPage() {
               onMouseOut={(e)  => (e.currentTarget.style.background = "#e53935")}
             >📥 Download PDF</button>
             <button
-              onClick={() => navigate("/interview")}
+              onClick={() => navigate("/pre-interview")}
               style={{ padding: "10px 20px", borderRadius: "6px", background: "transparent", border: "2px solid #2f8d46", color: "#2f8d46", fontWeight: 700, fontSize: "13px", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif", transition: "all 0.2s" }}
               onMouseOver={(e) => { e.currentTarget.style.background = "#2f8d46"; e.currentTarget.style.color = "#fff"; }}
               onMouseOut={(e)  => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#2f8d46"; }}
@@ -403,7 +403,7 @@ export default function ResultsPage() {
           </div>
           <div style={{ display: "flex", gap: "10px" }}>
             <button
-              onClick={() => navigate("/interview")}
+              onClick={() => navigate("/pre-interview")}
               style={{ padding: "9px 18px", borderRadius: "6px", background: "#2f8d46", border: "none", color: "#fff", fontWeight: 700, fontSize: "13px", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif", transition: "background 0.2s" }}
               onMouseOver={(e) => (e.currentTarget.style.background = "#257a3c")}
               onMouseOut={(e)  => (e.currentTarget.style.background = "#2f8d46")}
