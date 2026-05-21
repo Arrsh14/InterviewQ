@@ -7,11 +7,12 @@ const navItems = [
   { icon: "🎙",  label: "Interviews",    route: "/pre-interview"  },
   { icon: "📊",  label: "Analytics",     route: "/dashboard"  },
   { icon: "📋",  label: "Results",       route: "/results"    },
+  { icon: "🔬",  label: "Project Analysis",   route: "/progress" },
   { icon: "🎯",  label: "Question Bank", route: "/dashboard"  },
   { icon: "⚙️",  label: "Settings",      route: "/settings"   },  // ← only this changed
 ];
 
-// activePage: "Dashboard" | "Interviews" | "Results"  (defaults to "Dashboard")
+// activePage: "Dashboard" | "Interviews" | "Results" | "Project Analysis"
 export default function Sidebar({ activePage = "Dashboard" }) {
   const navigate = useNavigate();
   const [userName, setUserName] = useState("User");

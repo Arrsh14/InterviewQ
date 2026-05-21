@@ -9,7 +9,7 @@ import Research from "./pages/Research";
 import Docs from "./pages/Docs";
 import SettingsPage from "./pages/SettingsPage";
 import PreInterviewSetup from "./pages/PreInterviewSetup";
-
+import ProgressPage from './pages/ProgressPage';
 
 export default function App() {
   return (
@@ -25,6 +25,7 @@ export default function App() {
         <Route path="/docs" element={<Docs />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/pre-interview" element={<PreInterviewSetup />} />
+        <Route path="/progress" element={<ProgressPage />} />
 
       </Routes>
     </Router>

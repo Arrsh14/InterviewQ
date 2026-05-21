@@ -19,7 +19,7 @@ const User      = require("../models/User");
 // Using try/require so the controller still loads even if services aren't built yet
 let scoringService, openaiService, nlpService;
 try { scoringService = require("../services/scoringService"); } catch (_) {}
-try { openaiService  = require("../services/openaiService");  } catch (_) {}
+try { openaiService = require("../services/geminiService"); } catch (_) {}
 try { nlpService     = require("../services/nlpService");     } catch (_) {}
 
 // ─────────────────────────────────────────────────────────────────────────────

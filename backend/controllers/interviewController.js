@@ -222,7 +222,7 @@ const getMyInterviews = async (req, res) => {
     const interviews = await Interview.find({ user: req.user.id })
       .sort({ createdAt: -1 })   // newest first
       .select(
-        "role status overallScore durationSeconds questionsAnswered questionsTotal createdAt"
+       "role status overallScore communicationScore confidenceScore attentionScore aiFeedback durationSeconds questionsAnswered questionsTotal createdAt"
       );
 
     res.json({
