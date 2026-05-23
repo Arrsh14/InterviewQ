@@ -2,45 +2,70 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar.jsx";
 
-const card = {
-  background: "#fff",
-  border: "1px solid #e8e8e8",
-  borderRadius: "8px",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-  fontFamily: "'Open Sans','Segoe UI',sans-serif",
+// ─── Design tokens (same as ProgressPage) ────────────────────────────────────
+const C = {
+  bg:       "#0f1117",
+  surface:  "#161b27",
+  surface2: "#1c2333",
+  border:   "rgba(255,255,255,0.07)",
+  borderHi: "rgba(255,255,255,0.13)",
+  green:    "#22c55e",
+  blue:     "#60a5fa",
+  purple:   "#a78bfa",
+  amber:    "#fbbf24",
+  red:      "#f87171",
+  text:     "#f1f5f9",
+  textMid:  "#94a3b8",
+  textDim:  "#475569",
 };
 
-// ── Reusable toggle switch ────────────────────────────────────────────────────
+const font = "'DM Sans', 'Segoe UI', system-ui, sans-serif";
+
+// ─── Toggle ───────────────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
   return (
     <div
       onClick={() => onChange(!checked)}
       style={{
-        width: "40px", height: "22px", borderRadius: "11px", cursor: "pointer",
-        background: checked ? "#2f8d46" : "#e0e0e0",
+        width: "38px", height: "21px", borderRadius: "11px", cursor: "pointer",
+        background: checked ? C.green : "rgba(255,255,255,0.1)",
         position: "relative", transition: "background 0.2s", flexShrink: 0,
+        boxShadow: checked ? `0 0 10px ${C.green}44` : "none",
       }}
     >
       <div style={{
-        position: "absolute", top: "3px",
-        left: checked ? "21px" : "3px",
+        position: "absolute",
+        top: "2.5px",
+        left: checked ? "19px" : "3px",
         width: "16px", height: "16px", borderRadius: "50%",
-        background: "#fff", transition: "left 0.2s",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+        background: "#fff",
+        transition: "left 0.2s",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
       }} />
     </div>
   );
 }
 
-// ── Reusable section card ─────────────────────────────────────────────────────
-function SettingsSection({ title, accent = "#2f8d46", children }) {
+// ─── Section wrapper ──────────────────────────────────────────────────────────
+function Section({ title, accent, children }) {
+  const ac = accent || C.green;
   return (
-    <div style={{ ...card, padding: "22px 24px", marginBottom: "20px" }}>
+    <div style={{
+      background: C.surface,
+      border: `1px solid ${C.border}`,
+      borderRadius: "14px",
+      padding: "20px 22px",
+      marginBottom: "14px",
+    }}>
       <h3 style={{
-        fontSize: "15px", fontWeight: 700, color: "#1a1a1a",
-        marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px",
+        fontSize: "13px", fontWeight: 600, color: C.text,
+        marginBottom: "18px", display: "flex", alignItems: "center", gap: "9px",
       }}>
-        <span style={{ width: "4px", height: "18px", borderRadius: "2px", background: accent, display: "inline-block" }} />
+        <span style={{
+          width: "3px", height: "16px", borderRadius: "2px",
+          background: ac, display: "inline-block", flexShrink: 0,
+          boxShadow: `0 0 6px ${ac}88`,
+        }} />
         {title}
       </h3>
       {children}
@@ -48,182 +73,191 @@ function SettingsSection({ title, accent = "#2f8d46", children }) {
   );
 }
 
-// ── Row with label + control ──────────────────────────────────────────────────
-function SettingsRow({ label, sublabel, children, last = false }) {
+// ─── Settings row ─────────────────────────────────────────────────────────────
+function Row({ label, sub, last, children }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "space-between",
-      paddingBottom: last ? 0 : "16px", marginBottom: last ? 0 : "16px",
-      borderBottom: last ? "none" : "1px solid #f0f0f0",
       gap: "16px",
+      paddingBottom: last ? 0 : "14px",
+      marginBottom: last ? 0 : "14px",
+      borderBottom: last ? "none" : `1px solid ${C.border}`,
     }}>
       <div style={{ flex: 1 }}>
-        <p style={{ fontSize: "13px", fontWeight: 600, color: "#1a1a1a", margin: "0 0 2px" }}>{label}</p>
-        {sublabel && <p style={{ fontSize: "11px", color: "#aaa", margin: 0, lineHeight: 1.5 }}>{sublabel}</p>}
+        <p style={{ fontSize: "13px", fontWeight: 500, color: C.text, margin: "0 0 2px" }}>{label}</p>
+        {sub && <p style={{ fontSize: "11px", color: C.textDim, margin: 0, lineHeight: 1.4 }}>{sub}</p>}
       </div>
       {children}
     </div>
   );
 }
 
-// ── Main Settings Page ────────────────────────────────────────────────────────
+// ─── Shared input / select styles ────────────────────────────────────────────
+const inputStyle = {
+  width: "200px", padding: "7px 11px",
+  borderRadius: "7px", border: `1px solid rgba(255,255,255,0.07)`,
+  fontSize: "12px", color: "#f1f5f9",
+  background: "#1c2333", fontFamily: font, outline: "none",
+};
+
+const selectStyle = {
+  ...inputStyle,
+  cursor: "pointer", appearance: "none",
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+  backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center",
+  paddingRight: "26px",
+};
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
-  const navigate = useNavigate();
-  const userName = localStorage.getItem("iq_user_name") || "User";
+  const navigate  = useNavigate();
+  const userName  = localStorage.getItem("iq_user_name")  || "User";
   const userEmail = localStorage.getItem("iq_user_email") || "user@example.com";
 
-  // ── Profile state ──────────────────────────────────────────────────────────
-  const [name, setName] = useState(userName);
+  const [name,  setName]  = useState(userName);
   const [email, setEmail] = useState(userEmail);
-  const [role, setRole] = useState("CS Student");
+  const [role,  setRole]  = useState("CS Student");
   const [saved, setSaved] = useState(false);
 
-  // ── Interview preferences ──────────────────────────────────────────────────
-  const [questionCount, setQuestionCount] = useState(localStorage.getItem("iq_question_count") || "5");
-  const [timePerQ, setTimePerQ] = useState(localStorage.getItem("iq_time_per_q") || "120");
-  const [interviewTrack, setInterviewTrack] = useState(localStorage.getItem("iq_track") || "general");
-  const [difficulty, setDifficulty] = useState(localStorage.getItem("iq_difficulty") || "medium");
+  const [questionCount,  setQuestionCount]  = useState(localStorage.getItem("iq_question_count") || "5");
+  const [timePerQ,       setTimePerQ]       = useState(localStorage.getItem("iq_time_per_q")     || "120");
+  const [interviewTrack, setInterviewTrack] = useState(localStorage.getItem("iq_track")          || "technical");
+  const [difficulty,     setDifficulty]     = useState(localStorage.getItem("iq_difficulty")     || "medium");
 
+  const [eyeContact,     setEyeContact]     = useState(localStorage.getItem("iq_eye_contact")           !== "false");
+  const [facialAnalysis, setFacialAnalysis] = useState(localStorage.getItem("iq_facial_analysis")       !== "false");
+  const [speechTx,       setSpeechTx]       = useState(localStorage.getItem("iq_speech_transcription")  !== "false");
+  const [nlpScoring,     setNlpScoring]     = useState(localStorage.getItem("iq_nlp_scoring")           !== "false");
+  const [posture,        setPosture]        = useState(localStorage.getItem("iq_posture_detection")     === "true");
+  const [autoNext,       setAutoNext]       = useState(localStorage.getItem("iq_auto_next")             === "true");
 
-  // ── AI & detection toggles ─────────────────────────────────────────────────
-  const [eyeContactDetection, setEyeContactDetection] = useState(
-    localStorage.getItem("iq_eye_contact") !== "false"
-  );
-  const [facialAnalysis, setFacialAnalysis] = useState(
-    localStorage.getItem("iq_facial_analysis") !== "false"
-  );
-  const [speechTranscription, setSpeechTranscription] = useState(
-    localStorage.getItem("iq_speech_transcription") !== "false"
-  );
-  const [nlpScoring, setNlpScoring] = useState(
-    localStorage.getItem("iq_nlp_scoring") !== "false"
-  );
-  const [postureDetection, setPostureDetection] = useState(
-    localStorage.getItem("iq_posture_detection") === "true"
-  );
-  const [autoNextQuestion, setAutoNextQuestion] = useState(
-    localStorage.getItem("iq_auto_next") === "true"
-  );
-
-  // ── Notification toggles ───────────────────────────────────────────────────
-  const [eyeContactAlerts, setEyeContactAlerts] = useState(true);
-  const [timerWarnings, setTimerWarnings] = useState(true);
-  const [sessionSummary, setSessionSummary] = useState(true);
+  const [eyeAlerts,    setEyeAlerts]    = useState(true);
+  const [timerWarn,    setTimerWarn]    = useState(true);
+  const [sessionPop,   setSessionPop]   = useState(true);
   const [emailReports, setEmailReports] = useState(false);
 
-  // ── Privacy toggles ───────────────────────────────────────────────────────
   const [saveTranscripts, setSaveTranscripts] = useState(true);
-  const [saveVideoFrames, setSaveVideoFrames] = useState(false);
-  const [analytics, setAnalytics] = useState(true);
+  const [saveFrames,      setSaveFrames]      = useState(false);
+  const [analytics,       setAnalytics]       = useState(true);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleSaveProfile = () => {
-    localStorage.setItem("iq_user_name", name);
-    localStorage.setItem("iq_user_email", email);
-    localStorage.setItem("iq_user_role", role);
+  const handleSave = () => {
+    localStorage.setItem("iq_user_name",      name);
+    localStorage.setItem("iq_user_email",     email);
+    localStorage.setItem("iq_user_role",      role);
     localStorage.setItem("iq_question_count", questionCount);
-    localStorage.setItem("iq_time_per_q", timePerQ);
-    localStorage.setItem("iq_track", interviewTrack);
-    localStorage.setItem("iq_difficulty", difficulty);
+    localStorage.setItem("iq_time_per_q",     timePerQ);
+    localStorage.setItem("iq_track",          interviewTrack);
+    localStorage.setItem("iq_difficulty",     difficulty);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const handleDeleteAccount = () => {
-    if (window.confirm("Are you sure? This will permanently delete your account and all session data.")) {
+  const handleLogout = () => { localStorage.clear(); navigate("/auth"); };
+
+  const handleDelete = () => {
+    if (window.confirm("This will permanently delete your account and all session data. Continue?")) {
       localStorage.clear();
       navigate("/auth");
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/auth");
-  };
-
-  const inputStyle = {
-    width: "220px", padding: "8px 12px", borderRadius: "6px",
-    border: "1px solid #e8e8e8", fontSize: "13px", color: "#1a1a1a",
-    fontFamily: "'Open Sans','Segoe UI',sans-serif", outline: "none",
-    background: "#fafafa", transition: "border-color 0.15s",
-  };
-
-  const selectStyle = {
-    ...inputStyle, cursor: "pointer", appearance: "none",
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
-    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
-    paddingRight: "28px",
-  };
-
   return (
-    <div style={{ minHeight: "100vh", display: "flex", background: "linear-gradient(135deg,#dce8f5 0%,#eaf1fb 50%,#dce8f5 100%)", fontFamily: "'Open Sans','Segoe UI',sans-serif", color: "#2d2d2d" }}>
+    <div style={{ minHeight: "100vh", display: "flex", background: C.bg, fontFamily: font, color: C.text }}>
       <Sidebar activePage="Settings" />
 
-      <main style={{ marginLeft: "240px", padding: "32px 36px", flex: 1, overflowY: "auto" }}>
+      <main style={{ marginLeft: "220px", padding: "28px 32px", flex: 1, overflowY: "auto" }}>
 
         {/* ── Header ── */}
-        <div style={{ marginBottom: "28px" }}>
-          <p style={{ fontSize: "11px", color: "#888", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "5px", fontWeight: 600 }}>
+        <div style={{ marginBottom: "24px" }}>
+          <p style={{ fontSize: "10px", color: C.textDim, textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 600, marginBottom: "5px" }}>
             Preferences
           </p>
-          <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#1a1a1a", margin: 0 }}>
-            Account <span style={{ color: "#2f8d46" }}>Settings</span>
+          <h1 style={{ fontSize: "26px", fontWeight: 800, color: C.text, margin: "0 0 5px" }}>
+            Account <span style={{ color: C.green }}>Settings</span>
           </h1>
-          <p style={{ fontSize: "13px", color: "#666", marginTop: "6px" }}>
+          <p style={{ fontSize: "13px", color: C.textMid, margin: 0 }}>
             Manage your profile, interview preferences, and AI detection settings.
           </p>
         </div>
 
         {/* ── 1. Profile ── */}
-        <SettingsSection title="Profile Information" accent="#2f8d46">
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "24px", marginBottom: "20px" }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#eaf7ee", border: "2px solid #b7e4c7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", fontWeight: 800, color: "#2f8d46", flexShrink: 0 }}>
+        <Section title="Profile information" accent={C.green}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: "16px",
+            marginBottom: "18px", paddingBottom: "18px",
+            borderBottom: `1px solid ${C.border}`,
+          }}>
+            <div style={{
+              width: "56px", height: "56px", borderRadius: "50%",
+              background: "rgba(34,197,94,0.1)", border: "1.5px solid rgba(34,197,94,0.3)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "22px", fontWeight: 700, color: C.green, flexShrink: 0,
+              boxShadow: "0 0 16px rgba(34,197,94,0.15)",
+            }}>
               {name.charAt(0).toUpperCase()}
             </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: "15px", fontWeight: 700, color: "#1a1a1a", margin: "0 0 2px" }}>{name}</p>
-              <p style={{ fontSize: "12px", color: "#aaa", margin: "0 0 10px" }}>{email}</p>
-              <span style={{ fontSize: "11px", padding: "3px 10px", background: "#eaf7ee", border: "1px solid #b7e4c7", borderRadius: "4px", color: "#2f8d46", fontWeight: 600 }}>Free Plan</span>
+            <div>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: C.text, margin: "0 0 2px" }}>{name}</p>
+              <p style={{ fontSize: "12px", color: C.textMid, margin: "0 0 7px" }}>{email}</p>
+              <span style={{
+                fontSize: "10px", padding: "2px 9px",
+                background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
+                borderRadius: "4px", color: C.green, fontWeight: 600,
+              }}>Free Plan</span>
             </div>
           </div>
 
-          <SettingsRow label="Full Name" sublabel="This appears on your dashboard and reports">
-            <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = "#2f8d46")}
-              onBlur={(e) => (e.target.style.borderColor = "#e8e8e8")} />
-          </SettingsRow>
+          <Row label="Full name" sub="Appears on your dashboard and reports">
+            <input
+              value={name} onChange={(e) => setName(e.target.value)}
+              style={inputStyle}
+              onFocus={(e) => (e.target.style.borderColor = "rgba(34,197,94,0.5)")}
+              onBlur={(e)  => (e.target.style.borderColor = "rgba(255,255,255,0.07)")}
+            />
+          </Row>
+          <Row label="Email address" sub="Used for login and report delivery">
+            <input
+              value={email} onChange={(e) => setEmail(e.target.value)}
+              style={inputStyle}
+              onFocus={(e) => (e.target.style.borderColor = "rgba(34,197,94,0.5)")}
+              onBlur={(e)  => (e.target.style.borderColor = "rgba(255,255,255,0.07)")}
+            />
+          </Row>
+          <Row label="Role / title" sub="Helps personalise interview questions" last>
+            <input
+              value={role} onChange={(e) => setRole(e.target.value)}
+              placeholder="e.g. CS Student, Developer"
+              style={inputStyle}
+              onFocus={(e) => (e.target.style.borderColor = "rgba(34,197,94,0.5)")}
+              onBlur={(e)  => (e.target.style.borderColor = "rgba(255,255,255,0.07)")}
+            />
+          </Row>
 
-          <SettingsRow label="Email Address" sublabel="Used for login and report delivery">
-            <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = "#2f8d46")}
-              onBlur={(e) => (e.target.style.borderColor = "#e8e8e8")} />
-          </SettingsRow>
-
-          <SettingsRow label="Role / Title" sublabel="Helps personalise interview questions" last>
-            <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. CS Student, Developer" style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = "#2f8d46")}
-              onBlur={(e) => (e.target.style.borderColor = "#e8e8e8")} />
-          </SettingsRow>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px", gap: "10px" }}>
-            {saved && <span style={{ fontSize: "12px", color: "#2f8d46", fontWeight: 600, alignSelf: "center" }}>✓ Saved!</span>}
-            <button onClick={handleSaveProfile}
-              style={{ padding: "9px 22px", borderRadius: "6px", background: "#2f8d46", color: "#fff", fontWeight: 700, fontSize: "13px", border: "none", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif", transition: "background 0.2s" }}
-              onMouseOver={(e) => (e.currentTarget.style.background = "#257a3c")}
-              onMouseOut={(e) => (e.currentTarget.style.background = "#2f8d46")}
-            >Save Changes</button>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "10px", marginTop: "14px" }}>
+            {saved && <span style={{ fontSize: "12px", color: C.green, fontWeight: 600 }}>✓ Saved!</span>}
+            <button
+              onClick={handleSave}
+              style={{
+                padding: "8px 20px", borderRadius: "8px",
+                background: C.green, color: "#0f1117",
+                fontWeight: 700, fontSize: "12px",
+                border: "none", cursor: "pointer", fontFamily: font,
+                boxShadow: "0 0 14px rgba(34,197,94,0.3)",
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = "#16a34a"}
+              onMouseOut={(e)  => e.currentTarget.style.background = C.green}
+            >Save changes</button>
           </div>
-        </SettingsSection>
+        </Section>
 
         {/* ── 2. Interview Preferences ── */}
-        <SettingsSection title="Interview Preferences" accent="#4a90d9">
-          <SettingsRow label="Number of Questions" sublabel="How many questions per interview session">
+        <Section title="Interview preferences" accent={C.blue}>
+          <Row label="Number of questions" sub="Questions per interview session">
             <select value={questionCount} onChange={(e) => setQuestionCount(e.target.value)} style={selectStyle}>
-              {["3", "5", "7", "10"].map((n) => <option key={n} value={n}>{n} Questions</option>)}
+              {["3","5","7","10"].map((n) => <option key={n} value={n}>{n} Questions</option>)}
             </select>
-          </SettingsRow>
-
-          <SettingsRow label="Time per Question" sublabel="Countdown timer duration for each question">
+          </Row>
+          <Row label="Time per question" sub="Countdown timer duration">
             <select value={timePerQ} onChange={(e) => setTimePerQ(e.target.value)} style={selectStyle}>
               <option value="60">1 minute</option>
               <option value="90">1.5 minutes</option>
@@ -231,9 +265,8 @@ export default function SettingsPage() {
               <option value="180">3 minutes</option>
               <option value="300">5 minutes</option>
             </select>
-          </SettingsRow>
-
-          <SettingsRow label="Interview Track" sublabel="Domain focus for question selection">
+          </Row>
+          <Row label="Interview track" sub="Domain focus for question selection">
             <select value={interviewTrack} onChange={(e) => setInterviewTrack(e.target.value)} style={selectStyle}>
               <option value="general">General / Mixed</option>
               <option value="technical">Technical / CS</option>
@@ -242,125 +275,135 @@ export default function SettingsPage() {
               <option value="product">Product Management</option>
               <option value="data">Data Science</option>
             </select>
-          </SettingsRow>
-
-          <SettingsRow label="Difficulty Level" sublabel="Controls question complexity and scoring strictness" last>
+          </Row>
+          <Row label="Difficulty level" sub="Controls question complexity and scoring strictness" last>
             <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} style={selectStyle}>
               <option value="easy">Easy — Beginner</option>
               <option value="medium">Medium — Intermediate</option>
               <option value="hard">Hard — Advanced</option>
             </select>
-          </SettingsRow>
-        </SettingsSection>
+          </Row>
+        </Section>
 
         {/* ── 3. AI & Detection ── */}
-        <SettingsSection title="AI & Detection" accent="#7b5ea7">
-          <SettingsRow label="Eye Contact Detection" sublabel="Real-time gaze tracking using face-api.js — shows warning when you look away">
-            <Toggle checked={eyeContactDetection} onChange={(v) => { setEyeContactDetection(v); localStorage.setItem("iq_eye_contact", v); }} />
-          </SettingsRow>
-
-          <SettingsRow label="Facial Expression Analysis" sublabel="Detects engagement, emotion, and composure via webcam">
+        <Section title="AI & detection" accent={C.purple}>
+          <Row label="Eye contact detection" sub="Real-time gaze tracking via face-api.js">
+            <Toggle checked={eyeContact} onChange={(v) => { setEyeContact(v); localStorage.setItem("iq_eye_contact", v); }} />
+          </Row>
+          <Row label="Facial expression analysis" sub="Detects engagement and composure via webcam">
             <Toggle checked={facialAnalysis} onChange={(v) => { setFacialAnalysis(v); localStorage.setItem("iq_facial_analysis", v); }} />
-          </SettingsRow>
-
-          <SettingsRow label="Speech Transcription" sublabel="Live speech-to-text using Web Speech API">
-            <Toggle checked={speechTranscription} onChange={(v) => { setSpeechTranscription(v); localStorage.setItem("iq_speech_transcription", v); }} />
-          </SettingsRow>
-
-          <SettingsRow label="NLP Scoring" sublabel="Gemini AI evaluates answer quality, structure, and vocabulary">
+          </Row>
+          <Row label="Speech transcription" sub="Live speech-to-text using Web Speech API">
+            <Toggle checked={speechTx} onChange={(v) => { setSpeechTx(v); localStorage.setItem("iq_speech_transcription", v); }} />
+          </Row>
+          <Row label="NLP scoring" sub="Gemini AI evaluates answer quality and structure">
             <Toggle checked={nlpScoring} onChange={(v) => { setNlpScoring(v); localStorage.setItem("iq_nlp_scoring", v); }} />
-          </SettingsRow>
-
-          <SettingsRow label="Posture Detection" sublabel="Uses ML model to assess body posture via webcam (requires Python server)">
-            <Toggle checked={postureDetection} onChange={(v) => { setPostureDetection(v); localStorage.setItem("iq_posture_detection", v); }} />
-          </SettingsRow>
-
-          <SettingsRow label="Auto-advance Questions" sublabel="Automatically move to next question when timer expires" last>
-            <Toggle checked={autoNextQuestion} onChange={(v) => { setAutoNextQuestion(v); localStorage.setItem("iq_auto_next", v); }} />
-          </SettingsRow>
-        </SettingsSection>
+          </Row>
+          <Row label="Posture detection" sub="ML model assesses body posture (requires Python server)">
+            <Toggle checked={posture} onChange={(v) => { setPosture(v); localStorage.setItem("iq_posture_detection", v); }} />
+          </Row>
+          <Row label="Auto-advance questions" sub="Move to next question when timer expires" last>
+            <Toggle checked={autoNext} onChange={(v) => { setAutoNext(v); localStorage.setItem("iq_auto_next", v); }} />
+          </Row>
+        </Section>
 
         {/* ── 4. Notifications ── */}
-        <SettingsSection title="Notifications" accent="#f4a426">
-          <SettingsRow label="Eye Contact Alerts" sublabel="Show floating popup when gaze deviation is detected">
-            <Toggle checked={eyeContactAlerts} onChange={setEyeContactAlerts} />
-          </SettingsRow>
-
-          <SettingsRow label="Timer Warnings" sublabel="Visual and audio cue when 20 seconds remain">
-            <Toggle checked={timerWarnings} onChange={setTimerWarnings} />
-          </SettingsRow>
-
-          <SettingsRow label="Session Summary Popup" sublabel="Show completion summary when interview ends">
-            <Toggle checked={sessionSummary} onChange={setSessionSummary} />
-          </SettingsRow>
-
-          <SettingsRow label="Email Reports" sublabel="Receive PDF report via email after each session" last>
+        <Section title="Notifications" accent={C.amber}>
+          <Row label="Eye contact alerts" sub="Floating popup on gaze deviation">
+            <Toggle checked={eyeAlerts} onChange={setEyeAlerts} />
+          </Row>
+          <Row label="Timer warnings" sub="Visual and audio cue at 20 seconds remaining">
+            <Toggle checked={timerWarn} onChange={setTimerWarn} />
+          </Row>
+          <Row label="Session summary popup" sub="Show completion summary when interview ends">
+            <Toggle checked={sessionPop} onChange={setSessionPop} />
+          </Row>
+          <Row label="Email reports" sub="Receive PDF report via email after each session" last>
             <Toggle checked={emailReports} onChange={setEmailReports} />
-          </SettingsRow>
-        </SettingsSection>
+          </Row>
+        </Section>
 
         {/* ── 5. Privacy & Data ── */}
-        <SettingsSection title="Privacy & Data" accent="#4a90d9">
-          <SettingsRow label="Save Transcripts" sublabel="Store your spoken answers in MongoDB for historical review">
+        <Section title="Privacy & data" accent={C.blue}>
+          <Row label="Save transcripts" sub="Store spoken answers in MongoDB for review">
             <Toggle checked={saveTranscripts} onChange={setSaveTranscripts} />
-          </SettingsRow>
-
-          <SettingsRow label="Save Video Frames" sublabel="Store sampled webcam frames for facial analysis replay">
-            <Toggle checked={saveVideoFrames} onChange={setSaveVideoFrames} />
-          </SettingsRow>
-
-          <SettingsRow label="Usage Analytics" sublabel="Help improve InterviewQ by sharing anonymised usage data" last>
+          </Row>
+          <Row label="Save video frames" sub="Store sampled webcam frames for facial analysis replay">
+            <Toggle checked={saveFrames} onChange={setSaveFrames} />
+          </Row>
+          <Row label="Usage analytics" sub="Share anonymised usage data to improve InterviewQ" last>
             <Toggle checked={analytics} onChange={setAnalytics} />
-          </SettingsRow>
+          </Row>
 
-          <div style={{ marginTop: "16px", padding: "14px", background: "#f9f9f9", border: "1px solid #f0f0f0", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{
+            marginTop: "14px", padding: "14px",
+            background: C.surface2, border: `1px solid ${C.border}`,
+            borderRadius: "10px", display: "flex",
+            alignItems: "center", justifyContent: "space-between", gap: "12px",
+          }}>
             <div>
-              <p style={{ fontSize: "13px", fontWeight: 600, color: "#1a1a1a", margin: "0 0 2px" }}>Download My Data</p>
-              <p style={{ fontSize: "11px", color: "#aaa", margin: 0 }}>Export all your interview sessions, scores, and transcripts as JSON.</p>
+              <p style={{ fontSize: "13px", fontWeight: 500, color: C.text, margin: "0 0 2px" }}>Download my data</p>
+              <p style={{ fontSize: "11px", color: C.textDim, margin: 0 }}>Export sessions, scores, and transcripts as JSON.</p>
             </div>
-            <button style={{ padding: "7px 16px", borderRadius: "6px", background: "transparent", border: "1px solid #4a90d9", color: "#4a90d9", fontWeight: 600, fontSize: "12px", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif", whiteSpace: "nowrap" }}>
-              📥 Export Data
-            </button>
+            <button
+              style={{
+                padding: "7px 14px", borderRadius: "7px",
+                background: "transparent", border: "1px solid rgba(96,165,250,0.35)",
+                color: C.blue, fontWeight: 600, fontSize: "12px",
+                cursor: "pointer", fontFamily: font, whiteSpace: "nowrap",
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = "rgba(96,165,250,0.1)"; }}
+              onMouseOut={(e)  => { e.currentTarget.style.background = "transparent"; }}
+            >📥 Export data</button>
           </div>
-        </SettingsSection>
+        </Section>
 
-        {/* ── 6. Account Actions ── */}
-        <SettingsSection title="Account" accent="#e53935">
-          <SettingsRow label="Change Password" sublabel="Update your password via OTP verification">
+        {/* ── 6. Account ── */}
+        <Section title="Account" accent={C.red}>
+          <Row label="Change password" sub="Update your password via OTP verification">
             <button
               onClick={() => navigate("/auth")}
-              style={{ padding: "7px 16px", borderRadius: "6px", background: "transparent", border: "1px solid #e8e8e8", color: "#444", fontWeight: 600, fontSize: "12px", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif" }}
-            >
-              Change Password
-            </button>
-          </SettingsRow>
-
-          <SettingsRow label="Sign Out" sublabel="Log out from this device">
+              style={{
+                padding: "7px 14px", borderRadius: "7px",
+                background: "transparent", border: `1px solid ${C.borderHi}`,
+                color: C.textMid, fontWeight: 500, fontSize: "12px",
+                cursor: "pointer", fontFamily: font,
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = C.surface2; e.currentTarget.style.color = C.text; }}
+              onMouseOut={(e)  => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMid; }}
+            >Change password</button>
+          </Row>
+          <Row label="Sign out" sub="Log out from this device">
             <button
               onClick={handleLogout}
-              style={{ padding: "7px 16px", borderRadius: "6px", background: "transparent", border: "1px solid #e8e8e8", color: "#444", fontWeight: 600, fontSize: "12px", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif", transition: "all 0.2s" }}
-              onMouseOver={(e) => { e.currentTarget.style.borderColor = "#e53935"; e.currentTarget.style.color = "#e53935"; }}
-              onMouseOut={(e) => { e.currentTarget.style.borderColor = "#e8e8e8"; e.currentTarget.style.color = "#444"; }}
-            >
-              Sign Out
-            </button>
-          </SettingsRow>
-
-          <SettingsRow label="Delete Account" sublabel="Permanently delete your account and all associated data. This cannot be undone." last>
+              style={{
+                padding: "7px 14px", borderRadius: "7px",
+                background: "transparent", border: `1px solid ${C.borderHi}`,
+                color: C.textMid, fontWeight: 500, fontSize: "12px",
+                cursor: "pointer", fontFamily: font,
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = "rgba(248,113,113,0.08)"; e.currentTarget.style.borderColor = "rgba(248,113,113,0.4)"; e.currentTarget.style.color = C.red; }}
+              onMouseOut={(e)  => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = C.borderHi; e.currentTarget.style.color = C.textMid; }}
+            >Sign out</button>
+          </Row>
+          <Row label="Delete account" sub="Permanently delete your account and all data. Cannot be undone." last>
             <button
-              onClick={handleDeleteAccount}
-              style={{ padding: "7px 16px", borderRadius: "6px", background: "#fff5f5", border: "1px solid #ffcccc", color: "#e53935", fontWeight: 700, fontSize: "12px", cursor: "pointer", fontFamily: "'Open Sans','Segoe UI',sans-serif", transition: "all 0.2s" }}
-              onMouseOver={(e) => { e.currentTarget.style.background = "#e53935"; e.currentTarget.style.color = "#fff"; }}
-              onMouseOut={(e) => { e.currentTarget.style.background = "#fff5f5"; e.currentTarget.style.color = "#e53935"; }}
-            >
-              Delete Account
-            </button>
-          </SettingsRow>
-        </SettingsSection>
+              onClick={handleDelete}
+              style={{
+                padding: "7px 14px", borderRadius: "7px",
+                background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)",
+                color: C.red, fontWeight: 600, fontSize: "12px",
+                cursor: "pointer", fontFamily: font,
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = C.red; e.currentTarget.style.color = "#0f1117"; }}
+              onMouseOut={(e)  => { e.currentTarget.style.background = "rgba(248,113,113,0.08)"; e.currentTarget.style.color = C.red; }}
+            >Delete account</button>
+          </Row>
+        </Section>
 
-        {/* ── Version info ── */}
-        <div style={{ textAlign: "center", padding: "12px 0 32px" }}>
-          <p style={{ fontSize: "11px", color: "#ccc", margin: 0 }}>
+        {/* ── Version ── */}
+        <div style={{ textAlign: "center", padding: "10px 0 28px" }}>
+          <p style={{ fontSize: "11px", color: C.textDim, margin: 0 }}>
             InterviewQ v1.0.0 · VIT Vellore · Built by Arrsh Tripathi
           </p>
         </div>
